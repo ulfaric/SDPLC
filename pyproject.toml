@@ -1,9 +1,11 @@
 [tool.poetry]
 name = "sdplc"
-version = "0.1.0"
-description = ""
+version = "1.0.0"
+description = "PLC Simulation and Remote Control"
 authors = ["ulfaric <ryf0510@live.com>"]
 readme = "README.md"
+license = "CC-BY-NC-ND-4.0"
+repository = "https://github.com/ulfaric/SDPLC"
 
 [tool.poetry.dependencies]
 python = "^3.10"
