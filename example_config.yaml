@@ -1,0 +1,30 @@
+modbus:
+  byte_order: "big"
+  word_order: "big"
+
+
+variables:
+  - qualified_name: "Inlet Valve"
+    value: false
+    modbus_slave: 0
+    address: 0
+    type: "c"
+
+  - qualified_name: "Outlet Valve"
+    value: true
+    modbus_slave: 0
+    address: 1
+    type: "c"
+
+  - qualified_name: "Tank Level"
+    value: 0.0
+    modbus_slave: 0
+    address: 0
+    type: "i"
+    register_size: 64
+
+  - qualified_name: "Blender"
+    value: false
+    modbus_slave: 0
+    address: 2
+    type: "c"
