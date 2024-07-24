@@ -12,7 +12,7 @@ from asyncua import Node, Server, ua
 from asyncua.server.user_managers import UserManager
 from asyncua.server.users import User, UserRole
 
-from . import logger
+from .. import logger
 
 
 class simOPCUA_UserManager(UserManager):
@@ -24,7 +24,7 @@ class simOPCUA_UserManager(UserManager):
         return User(role=UserRole.Admin)
 
 
-class SimOPCUA:
+class SDPLCOPCUAServer:
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -226,4 +226,4 @@ class SimOPCUA:
         asyncio.run(main=Mundus.simulate(till=math.inf))
 
 
-opcua = SimOPCUA()
+opcuaServer = SDPLCOPCUAServer()

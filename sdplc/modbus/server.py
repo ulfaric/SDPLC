@@ -18,7 +18,7 @@ from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.payload import BinaryPayloadBuilder, BinaryPayloadDecoder
 from pymodbus.server import StartAsyncTcpServer
 
-from . import logger
+from .. import logger
 
 
 @dataclass
@@ -146,7 +146,7 @@ class ModBusSlave:
                 slave=self.id, address=address, value=value, size=size, type=type
             )
         )
-        bits = modbus.encoder(value, size)
+        bits = modbusServer.encoder(value, size)
         self.holding_registers_memory[address : address + size // 16] = bits
         self.holding_registers_memory_occupancy[address : address + size // 16] = [
             True for _ in range(size // 16)
@@ -181,7 +181,7 @@ class ModBusSlave:
                 slave=self.id, address=address, value=value, size=size, type=type
             )
         )
-        bits = modbus.encoder(value, size)
+        bits = modbusServer.encoder(value, size)
         self.input_registers_memory[address : address + size // 16] = bits
         self.input_registers_memory_occupancy[address : address + size // 16] = [
             True for _ in range(size // 16)
@@ -207,7 +207,7 @@ class ModBusSlave:
         return self.context
 
 
-class SimPLCModBus:
+class SDPLCModBusServer:
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -363,7 +363,7 @@ class SimPLCModBus:
         size = self.slaves[slave].holding_registers[address].size
         bits = register.getValues(address, size // 16)
         format = self.slaves[slave].holding_registers[address].type
-        return modbus.decoder(bits, format)
+        return modbusServer.decoder(bits, format)
 
     def write_holding_register(
         self, slave: int, address: int, value: int | float
@@ -384,10 +384,10 @@ class SimPLCModBus:
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["h"]
         size = self.slaves[slave].holding_registers[address].size
         type = self.slaves[slave].holding_registers[address].type
-        bits = modbus.encoder(value, size)
+        bits = modbusServer.encoder(value, size)
         for i in range(size // 16):
             register.setValues(address + i, bits[i])
-        return modbus.decoder(register.getValues(address, size // 16), type)
+        return modbusServer.decoder(register.getValues(address, size // 16), type)
 
     def create_input_register(
         self,
@@ -426,7 +426,7 @@ class SimPLCModBus:
         size = self.slaves[slave].input_registers[address].size
         bits = register.getValues(address, size // 16)
         format = self.slaves[slave].input_registers[address].type
-        return modbus.decoder(bits, format)
+        return modbusServer.decoder(bits, format)
 
     def write_input_register(
         self, slave: int, address: int, value: int | float
@@ -447,10 +447,10 @@ class SimPLCModBus:
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["i"]
         size = self.slaves[slave].input_registers[address].size
         type = self.slaves[slave].input_registers[address].type
-        bits = modbus.encoder(value, size)
+        bits = modbusServer.encoder(value, size)
         for i in range(size // 16):
             register.setValues(address + i, bits[i])
-        return modbus.decoder(register.getValues(address, size // 16), type)
+        return modbusServer.decoder(register.getValues(address, size // 16), type)
 
     def create_slave(self, id: int):
         """
@@ -505,7 +505,7 @@ class SimPLCModBus:
 
     def encoder(self, value: int | float, size: Literal[16, 32, 64] = 16):
         builder = BinaryPayloadBuilder(
-            byteorder=modbus.byte_order, wordorder=modbus.word_order
+            byteorder=modbusServer.byte_order, wordorder=modbusServer.word_order
         )
         if isinstance(value, int):
             if size == 16:
@@ -542,7 +542,7 @@ class SimPLCModBus:
             int | float: The decoded value.
         """
         decoder = BinaryPayloadDecoder.fromRegisters(
-            bits, byteorder=modbus.byte_order, wordorder=modbus.word_order
+            bits, byteorder=modbusServer.byte_order, wordorder=modbusServer.word_order
         )
         if type == "float":
             if len(bits) * 8 == 16:
@@ -564,4 +564,4 @@ class SimPLCModBus:
 
 
 # Create a singleton instance of the SimPLCModBus class
-modbus = SimPLCModBus()
+modbusServer = SDPLCModBusServer()

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from typing import List
 from .schemas import SimVariable
-from .plc import simPLC
+from .sdplc import simPLC
 from Akatosh.universe import Mundus
 
 sim_plc_router = APIRouter()
@@ -78,7 +78,7 @@ async def get_opcua_namespaces():
     Returns:
         List[str]: the list of namespaces.
     """
-    namespaces = await simPLC.opcua.server.get_namespace_array()
+    namespaces = await simPLC.opcuaServer.server.get_namespace_array()
     return namespaces
 
 
@@ -92,7 +92,9 @@ async def get_opcua_nodes():
     Returns:
         List[str]: return the list of browse names of the nodes.
     """
-    return [await node.read_browse_name() for _, node in simPLC.opcua.nodes.items()]
+    return [
+        await node.read_browse_name() for _, node in simPLC.opcuaServer.nodes.items()
+    ]
 
 
 @sim_plc_router.get("/opcua/nodes/{node_id}/variables", tags=["Sim OPC UA"])
@@ -108,7 +110,7 @@ async def get_opcua_node_variables(node_id: str):
     Returns:
         List[str]: return the list of browse names of the variables under the node.
     """
-    node = simPLC.opcua.nodes[node_id]
+    node = simPLC.opcuaServer.nodes[node_id]
     variables = await node.get_children()
     return [await variable.read_browse_name() for variable in variables]
 
@@ -124,7 +126,7 @@ async def get_modbus_slaves():
     Returns:
         List[int]: the list of slave ids.
     """
-    return simPLC.modbus.slaves.keys()
+    return simPLC.modbusServer.slaves.keys()
 
 
 @sim_plc_router.get("/modbus/slaves/{slave_id}/coils", tags=["Sim Modbus"])
@@ -140,7 +142,7 @@ async def get_modbus_coils(slave_id: int):
     Returns:
         List[int]: the list of coil addresses.
     """
-    coils = [coil.address for coil in simPLC.modbus.slaves[slave_id].coils]
+    coils = [coil.address for coil in simPLC.modbusServer.slaves[slave_id].coils]
     return coils
 
 
@@ -159,7 +161,7 @@ async def get_modbus_discrete_inputs(slave_id: int):
     """
     discrete_inputs = [
         discrete_input.address
-        for discrete_input in simPLC.modbus.slaves[slave_id].discrete_inputs
+        for discrete_input in simPLC.modbusServer.slaves[slave_id].discrete_inputs
     ]
     return discrete_inputs
 
@@ -179,7 +181,7 @@ async def get_modbus_holding_registers(slave_id: int):
     """
     holding_registers = [
         holding_register.address
-        for holding_register in simPLC.modbus.slaves[slave_id].holding_registers
+        for holding_register in simPLC.modbusServer.slaves[slave_id].holding_registers
     ]
     return holding_registers
 
@@ -199,6 +201,6 @@ async def get_modbus_input_registers(slave_id: int):
     """
     input_registers = [
         input_register.address
-        for input_register in simPLC.modbus.slaves[slave_id].input_registers
+        for input_register in simPLC.modbusServer.slaves[slave_id].input_registers
     ]
     return input_registers

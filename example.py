@@ -7,7 +7,7 @@ from Akatosh.universe import Mundus
 from FasterAPI.app import app
 from asyncua import ua
 from sdplc import logger
-from sdplc.plc import simPLC
+from sdplc.sdplc import simPLC
 from sdplc.router import sim_plc_router
 from FasterAPI.cert import generate_key_and_csr, generate_root_ca, sign_certificate
 
