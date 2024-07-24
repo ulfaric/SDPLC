@@ -10,6 +10,21 @@ Addtionally, you can use the "Akatosh" library (pre-bundled) to create logic tha
 
 Thanks "asyncua" and "pymodbus" for the implementation of OPC UA and Modbus protocols.
 
+## Update
+
+### 1.0.0
+
+Initial release.
+
+### 1.0.1
+
+1. Implemented configuration file validation
+2. Rewrite value sync logic
+
+### 1.0.2
+
+Coming soon! This version will include the capability to connect with down stream ModBus/OPC UA server, so that your logic written with Akatosh will be able to actually control real PLCs!
+
 ## Examples
 
 The following example shows how to run three servers at the same time, and with a simulation of a tank plus blender system. Note that, Akatosh in real-time mode does not have a pre-defined time step, the simulated object will update as fast as possible which is only limited by the CPU speed. Thus, although the input/output valve is set with a integer as flow rate, the tank level will always be a float number.
@@ -126,35 +141,57 @@ if __name__ == "__main__":
 
 ```yaml
 modbus:
+  address: 0.0.0.0
+  port: 1502
   byte_order: "big"
   word_order: "big"
 
+opcua:
+  url: "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/"
+  security_policy:
+    - 0
 
-variables:
+nodes:
   - qualified_name: "Inlet Valve"
     value: false
-    modbus_slave: 0
-    address: 0
-    type: "c"
+    modbus:
+      slave: 0
+      address: 0
+      type: "c"
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"
 
   - qualified_name: "Outlet Valve"
     value: true
-    modbus_slave: 0
-    address: 1
-    type: "c"
+    modbus:
+      slave: 0
+      address: 1
+      type: "c"
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"
 
   - qualified_name: "Tank Level"
     value: 0.0
-    modbus_slave: 0
-    address: 0
-    type: "i"
-    register_size: 64
+    modbus:
+      slave: 0
+      address: 0
+      type: "i"
+      register_size: 64
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"
 
   - qualified_name: "Blender"
     value: false
-    modbus_slave: 0
-    address: 2
-    type: "c"
+    modbus:
+      slave: 0
+      address: 2
+      type: "c"
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"
 ```
 
 ### Modbus
@@ -162,20 +199,20 @@ variables:
 You can also just simulate a Modbus server. In this mode, you will have to add registers manually.
 
 ```python
-from sdplc.modbus import modbus
+from sdplc.modbus.server import modbusServer
 
-modbus.create_slave(0)
-
-for i in range(0, 10):
-    modbus.create_coil(0, i, False)
+modbusServer.create_slave(0)
 
 for i in range(0, 10):
-    modbus.create_discrete_input(0, i, False)
+    modbusServer.create_coil(0, i, False)
 
-modbus.create_holding_register(0, 0, 0, 64)
-modbus.create_input_register(0, 0, 1000, 64)
+for i in range(0, 10):
+    modbusServer.create_discrete_input(0, i, False)
 
-modbus.start()
+modbusServer.create_holding_register(0, 0, 0, 64)
+modbusServer.create_input_register(0, 0, 1000, 64)
+
+modbusServer.start()
 ```
 
 ### OPC UA
@@ -183,15 +220,17 @@ modbus.start()
 You can also just simulate a OPC UA server. You will also need to manually create namespace, node and variables.
 
 ```python
-from sdplc.opcua import opcua
+from sdplc.opcua.server import opcuaServer
 
-opcua.init()
+opcuaServer.init()
 
 namespace = "http://example.org"
-opcua.register_namespace(namespace)
-node = opcua.register_node("Tank", namespace)
-opcua.register_variable("Tank Level", node=node, writeable=True, value=0)
-opcua.register_variable("Tank Temperature", node_qualified_name="Tank", writeable=True, value=0)
+opcuaServer.register_namespace(namespace)
+node = opcuaServer.register_node("Tank", namespace)
+opcuaServer.register_variable("Tank Level", node=node, writeable=True, value=0)
+opcuaServer.register_variable(
+    "Tank Temperature", node_qualified_name="Tank", writeable=True, value=0
+)
 
-opcua.start()
+opcuaServer.start()
 ```

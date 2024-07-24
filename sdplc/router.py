@@ -45,7 +45,7 @@ async def read_variable(qualified_name: str):
     Returns:
         int | float | bool: the value of the variable.
     """
-    readings = await simPLC.read_variable(qualified_name=qualified_name)
+    readings = await simPLC.read_node(qualified_name=qualified_name)
     return readings
 
 
@@ -63,8 +63,8 @@ async def write_variable(qualified_name: str, value: int | float | bool):
     Returns:
         int | float | bool: read and return the value of the variable after writing.
     """
-    await simPLC.write_variable(qualified_name=qualified_name, value=value)
-    return await simPLC.read_variable(qualified_name=qualified_name)
+    await simPLC.write_node(qualified_name=qualified_name, value=value)
+    return await simPLC.read_node(qualified_name=qualified_name)
 
 
 # OPC UA endpoints

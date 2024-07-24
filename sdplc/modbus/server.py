@@ -545,18 +545,18 @@ class SDPLCModBusServer:
             bits, byteorder=modbusServer.byte_order, wordorder=modbusServer.word_order
         )
         if type == "float":
-            if len(bits) * 8 == 16:
+            if len(bits) ==1:
                 raise ValueError("16 bit float is not supported.")
-            elif len(bits) * 8 == 32:
+            elif len(bits) ==2:
                 return decoder.decode_32bit_float()
-            elif len(bits) * 8 == 64:
+            elif len(bits) == 4:
                 return decoder.decode_64bit_float()
         if type == "int":
-            if len(bits) * 8 == 16:
+            if len(bits)==1:
                 return decoder.decode_16bit_int()
-            elif len(bits) * 8 == 32:
+            elif len(bits) == 2:
                 return decoder.decode_32bit_int()
-            elif len(bits) * 8 == 64:
+            elif len(bits)  ==  4:
                 return decoder.decode_64bit_int()
         raise ValueError(
             f"Invalid length of bits,  expected 16, 32 or 64, but got {len(bits)}."
