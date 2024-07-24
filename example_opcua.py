@@ -1,11 +1,13 @@
-from sdplc.opcua import server
+from sdplc.opcua.server import opcuaServer
 
-server.init()
+opcuaServer.init()
 
 namespace = "http://example.org"
-server.register_namespace(namespace)
-node = server.register_node("Tank", namespace)
-server.register_variable("Tank Level", node=node, writeable=True, value=0)
-server.register_variable("Tank Temperature", node_qualified_name="Tank", writeable=True, value=0)
+opcuaServer.register_namespace(namespace)
+node = opcuaServer.register_node("Tank", namespace)
+opcuaServer.register_variable("Tank Level", node=node, writeable=True, value=0)
+opcuaServer.register_variable(
+    "Tank Temperature", node_qualified_name="Tank", writeable=True, value=0
+)
 
-server.start()
+opcuaServer.start()

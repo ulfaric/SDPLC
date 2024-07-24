@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from math import inf
+from math import e, inf
 from typing import Dict, List, NoReturn, Optional
 
 import Akatosh
@@ -10,11 +10,12 @@ from Akatosh.universe import Mundus
 from asyncua import ua
 from pymodbus.constants import Endian
 from pymodbus.server import StartAsyncTcpServer
+from pydantic import ValidationError
 
 from . import logger
 from .modbus.server import modbusServer
 from .opcua.server import opcuaServer
-from .schemas import SimVariable
+from .schemas import ModBusConfig, Node, Config, OPCUAConfig
 
 
 class SDPLC:
@@ -22,79 +23,108 @@ class SDPLC:
     def __init__(self) -> None:
         self.opcuaServer = opcuaServer
         self.modbusServer = modbusServer
-        self.variables: List[SimVariable] = list()
+        self.nodes: List[Node] = list()
+        self.config: Config = Config(
+            north=["OPCUA", "ModBus"],
+            south=[],
+            modbus=ModBusConfig(
+                address="0.0.0.0",
+                port=1502,
+            ),
+            opcua=OPCUAConfig(
+                url="opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/",
+                security_policy=[ua.SecurityPolicyType.NoSecurity],
+            ),
+            nodes=None,
+        )
 
     def init(
         self,
-        opcua_endpoint: Optional[str] = "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/",
-        security_policy: Optional[List[ua.SecurityPolicyType]] = None,
-        private_key: Optional[str] = None,
-        certificate: Optional[str] = None,
-        modbus_address: Optional[str] = "0.0.0.0",
-        modbus_port: Optional[int] = 1502,
         config_file: Optional[str] = "config.yaml",
     ) -> None:
-
-        self.opcuaServer.init(opcua_endpoint)
         if config_file:
             try:
-                config: Dict = yaml.safe_load(open(config_file, "r"))
-                modbus_config = config["modbus"]
-                self.modbusServer.config(
-                    byte_order=(
-                        Endian.BIG
-                        if modbus_config["byte_order"] == "b"
-                        else Endian.LITTLE
-                    ),
-                    word_order=(
-                        Endian.BIG
-                        if modbus_config["word_order"] == "b"
-                        else Endian.LITTLE
-                    ),
-                )
-                if "variables" in config.keys():
-                    for variable in config["variables"]:
-                        self.add_variable(SimVariable(**variable))
+                config = yaml.safe_load(open(config_file, "r"))
+                self.config = Config(**config)
             except FileNotFoundError as e:
-                logger.warning(f"Config file not found, {e}")
+                logger.warning(
+                    f"Config file {config_file} not found, default configuration will be used instead."
+                )
             except yaml.YAMLError as e:
-                logger.warning(f"Invalid config file, {e}")
-
-        self.modbusServer.init()
-
-        @event(at=0, till=0, label="Start Modbus Server")
-        async def start_modbus_server():
-            logger.info("Starting Modbus server...")
-            await StartAsyncTcpServer(
-                context=self.modbusServer.server_context,
-                identity=self.modbusServer.identity,
-                address=(modbus_address, modbus_port),
-            )
-
-        @event(at=0, till=0, label="Start OPC UA Server")
-        async def start_opcua_server() -> NoReturn:
-            if security_policy:
-                self.opcuaServer.server.set_security_policy(security_policy)
-            else:
-                self.opcuaServer.server.set_security_policy(
-                    security_policy=[ua.SecurityPolicyType.NoSecurity]
+                logger.warning(
+                    f"Invalid config file {config_file}, {e}. Default configuration will be used instead."
                 )
-            if private_key and certificate:
-                await self.opcuaServer.server.load_private_key(
-                    path_or_content=private_key
+            except ValidationError as e:
+                logger.warning(
+                    f"Invalid config file {config_file}, {e}. Default configuration will be used instead."
                 )
-                await self.opcuaServer.server.load_certificate(
-                    path_or_content=certificate
-                )
-            logger.info("Starting OPC UA server...")
-            await self.opcuaServer.server.start()
+
+            if self.config.north:
+                if "OPCUA" in self.config.north:
+                    if self.config.opcua:
+                        self.opcuaServer.init(self.config.opcua.url)
+
+                        @event(at=0, till=0, label="Start OPC UA Server")
+                        async def start_opcua_server() -> NoReturn:
+                            if self.config.opcua is None:
+                                raise ValueError("OPCUA configuration is missing.")
+
+                            self.opcuaServer.server.set_security_policy(
+                                self.config.opcua.security_policy
+                            )
+                            if (
+                                self.config.opcua.private_key
+                                and self.config.opcua.certificate
+                            ):
+                                await self.opcuaServer.server.load_private_key(
+                                    path_or_content=self.config.opcua.private_key
+                                )
+                                await self.opcuaServer.server.load_certificate(
+                                    path_or_content=self.config.opcua.certificate
+                                )
+                            logger.info("Starting OPC UA server...")
+                            await self.opcuaServer.server.start()
+
+                if self.config.nodes:
+                    for node in self.config.nodes:
+                        self.add_Node(node)
+
+                if "ModBus" in self.config.north:
+                    if self.config.modbus:
+                        self.modbusServer.config(
+                            byte_order=(
+                                Endian.BIG
+                                if self.config.modbus.byte_order == "big"
+                                else Endian.LITTLE
+                            ),
+                            word_order=(
+                                Endian.BIG
+                                if self.config.modbus.word_order == "big"
+                                else Endian.LITTLE
+                            ),
+                        )
+
+                        @event(at=0, till=0, label="Start Modbus Server")
+                        async def start_modbus_server() -> NoReturn:
+                            if self.config.modbus is None:
+                                raise ValueError("ModBus configuration is missing.")
+                            self.modbusServer.init()
+                            logger.info("Starting Modbus server...")
+                            await StartAsyncTcpServer(
+                                context=self.modbusServer.server_context,
+                                identity=self.modbusServer.identity,
+                                address=(
+                                    self.config.modbus.address,
+                                    self.config.modbus.port,
+                                ),
+                            )
 
     def start(self) -> None:
         Akatosh.logger.setLevel(level=logging.INFO)
         Mundus.enable_realtime()
         asyncio.run(main=Mundus.simulate(till=inf))
 
-    def add_variable(self, variable: SimVariable) -> None:
+    def add_Node(self, node: Node) -> None:
         """
         add_variable Creates a variable in the Modbus server and registers it in the OPC UA server.
 
@@ -106,151 +136,86 @@ class SDPLC:
         Raises:
             ValueError: raised when the value type is invalid for the variable type, or when the register size is invalid for holding and input registers.
         """
-        # check if the OPC UA namespace exists
-        # Each modbus slave has its own namespace and a root node with the slave id as qualified name
-        namespace = f"http://sdics.com/ModBus/slave/{variable.modbus_slave}"
-        if namespace not in self.opcuaServer.namespaces.keys():
-            self.opcuaServer.register_namespace(namespace)
-            self.opcuaServer.register_node(
-                qualified_name=f"{variable.modbus_slave}", namespace=namespace
-            )
-
-        # check if the modbus slave exists
-        if variable.modbus_slave not in self.modbusServer.slaves.keys():
-            # create the modbus slave if not exists
-            self.modbusServer.create_slave(variable.modbus_slave)
-
-        if variable.type == "c":
-            if isinstance(variable.value, bool):
-                self.modbusServer.create_coil(
-                    variable.modbus_slave, variable.address, variable.value
-                )
-
+        self.nodes.append(node)
+        if self.config.north and "OPCUA" in self.config.north:
+            # check if the OPC UA namespace exists
+            # Each modbus slave has its own namespace and a root node with the slave id as qualified name
+            if node.opcua:
+                namespace = f"http://ulfaric/SDPLC/{node.opcua.namespace}"
+                if namespace not in self.opcuaServer.namespaces.keys():
+                    self.opcuaServer.register_namespace(namespace)
+                    self.opcuaServer.register_node(
+                        qualified_name=f"{node.opcua.node_qualified_name}",
+                        namespace=namespace,
+                    )
                 self.opcuaServer.register_variable(
-                    variable.qualified_name,
+                    node.qualified_name,
                     True,
-                    variable.value,
-                    self.opcuaServer.nodes[str(variable.modbus_slave)],
+                    node.value,
+                    self.opcuaServer.nodes[node.opcua.node_qualified_name],
                 )
 
-                @event(
-                    at=0,
-                    till=inf,
-                    label=f"Sync Coil {variable.qualified_name}",
-                    priority=1,
-                )
-                async def sync_coil():
-                    value: bool = await self.opcuaServer.variables[
-                        variable.qualified_name
-                    ].read_value()
-                    self.modbusServer.write_coil(
-                        variable.modbus_slave, variable.address, value
+        if self.config.north and "ModBus" in self.config.north:
+            if node.modbus:
+                # check if the modbus slave exists
+                if node.modbus.slave not in self.modbusServer.slaves.keys():
+                    # create the modbus slave if not exists
+                    self.modbusServer.create_slave(node.modbus.slave)
+
+                if node.modbus.type == "c":
+                    self.modbusServer.create_coil(
+                        node.modbus.slave, node.modbus.address, bool(node.value)
+                    )
+                elif node.modbus.type == "d":
+                    if isinstance(node.value, bool):
+                        self.modbusServer.create_discrete_input(
+                            node.modbus.slave, node.modbus.address, bool(node.value)
+                        )
+                elif node.modbus.type == "h":
+                    self.modbusServer.create_holding_register(
+                        node.modbus.slave,
+                        node.modbus.address,
+                        node.value,
+                        node.modbus.register_size,
+                    )
+                elif node.modbus.type == "i":
+                    self.modbusServer.create_input_register(
+                        node.modbus.slave,
+                        node.modbus.address,
+                        node.value,
+                        node.modbus.register_size,
                     )
 
-            else:
-                raise ValueError("Invalid value type for Modbus coil.")
-        elif variable.type == "d":
-            if isinstance(variable.value, bool):
-                self.modbusServer.create_discrete_input(
-                    variable.modbus_slave, variable.address, variable.value
-                )
-
-                self.opcuaServer.register_variable(
-                    variable.qualified_name,
-                    False,
-                    variable.value,
-                    self.opcuaServer.nodes[str(variable.modbus_slave)],
-                )
-
-                @event(
-                    at=0,
-                    till=inf,
-                    label=f"Sync Discrete Input {variable.qualified_name}",
-                    priority=1,
-                )
-                async def sync_discrete_input():
-                    value: bool = await self.opcuaServer.variables[
-                        variable.qualified_name
-                    ].read_value()
-
-                    self.modbusServer.write_discrete_input(
-                        variable.modbus_slave, variable.address, value
+        @event(
+            at=0,
+            till=inf,
+            label=f"Sync Node {node.qualified_name}",
+            priority=1,
+        )
+        async def sync_node():
+            if self.config.north and "OPCUA" in self.config.north:
+                if node.opcua:
+                    await self.opcuaServer.variables[node.qualified_name].write_value(
+                        node.value
                     )
-
-            else:
-                raise ValueError("Invalid value type for Modbus discrete input.")
-        elif variable.type == "h":
-            if isinstance(variable.value, int) or isinstance(variable.value, float):
-                if variable.register_size not in [16, 32, 64]:
-                    raise ValueError(
-                        "Invalid register size for Modbus holding register."
-                    )
-                self.modbusServer.create_holding_register(
-                    variable.modbus_slave,
-                    variable.address,
-                    variable.value,
-                    variable.register_size,
-                )
-
-                self.opcuaServer.register_variable(
-                    variable.qualified_name,
-                    True,
-                    variable.value,
-                    self.opcuaServer.nodes[str(variable.modbus_slave)],
-                )
-
-                @event(
-                    at=0,
-                    till=inf,
-                    label=f"Sync Holding Register {variable.qualified_name}",
-                    priority=1,
-                )
-                async def sync_holding_register():
-                    value = await self.opcuaServer.variables[
-                        variable.qualified_name
-                    ].read_value()
-                    self.modbusServer.write_holding_register(
-                        variable.modbus_slave, variable.address, value
-                    )
-
-            else:
-                raise ValueError("Invalid value type for Modbus holding register.")
-        elif variable.type == "i":
-            if isinstance(variable.value, int) or isinstance(variable.value, float):
-                if variable.register_size not in [16, 32, 64]:
-                    raise ValueError("Invalid register size for Modbus input register.")
-                self.modbusServer.create_input_register(
-                    variable.modbus_slave,
-                    variable.address,
-                    variable.value,
-                    variable.register_size,
-                )
-
-                self.opcuaServer.register_variable(
-                    variable.qualified_name,
-                    False,
-                    variable.value,
-                    self.opcuaServer.nodes[str(variable.modbus_slave)],
-                )
-
-                @event(
-                    at=0,
-                    till=inf,
-                    label=f"Sync Input Register {variable.qualified_name}",
-                    priority=1,
-                )
-                async def sync_input_register():
-                    value = await self.opcuaServer.variables[
-                        variable.qualified_name
-                    ].read_value()
-                    self.modbusServer.write_input_register(
-                        variable.modbus_slave, variable.address, value
-                    )
-
-            else:
-                raise ValueError("Invalid value type for Modbus input register.")
-
-        self.variables.append(variable)
+            if self.config.north and "ModBus" in self.config.north:
+                if node.modbus:
+                    if node.modbus.type == "c":
+                        self.modbusServer.write_coil(
+                            node.modbus.slave, node.modbus.address, bool(node.value)
+                        )
+                    elif node.modbus.type == "d":
+                        self.modbusServer.write_discrete_input(
+                            node.modbus.slave, node.modbus.address, bool(node.value)
+                        )
+                    elif node.modbus.type == "h":
+                        self.modbusServer.write_holding_register(
+                            node.modbus.slave, node.modbus.address, node.value
+                        )
+                    elif node.modbus.type == "i":
+                        self.modbusServer.write_input_register(
+                            node.modbus.slave, node.modbus.address, node.value
+                        )
 
     async def read_variable(self, qualified_name: str):
         """
@@ -268,13 +233,14 @@ class SDPLC:
         Returns:
             bool | int | float: the value of the variable.
         """
-        variable = next(
-            (var for var in self.variables if var.qualified_name == qualified_name),
+        node = next(
+            (node for node in self.nodes if node.qualified_name == qualified_name),
             None,
         )
-        if variable is None:
-            raise RuntimeError("Variable not found.")
-        return await self.opcuaServer.variables[qualified_name].read_value()
+        if node is None:
+            raise RuntimeError(f"Node {node} not found.")
+        return node.value
+    
 
     async def write_variable(self, qualified_name: str, value: int | float | bool):
         """
@@ -289,19 +255,13 @@ class SDPLC:
         Raises:
             ValueError: raised if the variable is not found, or if the value type is invalid for the variable type.
         """
-        variable = next(
-            (var for var in self.variables if var.qualified_name == qualified_name),
+        node = next(
+            (var for var in self.nodes if var.qualified_name == qualified_name),
             None,
         )
-        if variable is None:
-            raise RuntimeError("Variable not found.")
-        if isinstance(variable.value, bool):
-            value = bool(value)
-        elif isinstance(variable.value, int):
-            value = int(value)
-        elif isinstance(variable.value, float):
-            value = float(value)
-        await self.opcuaServer.variables[qualified_name].write_value(value)
+        if node is None:
+            raise ValueError(f"Node {node} not found.")
+        node.value = value
 
 
 simPLC = SDPLC()

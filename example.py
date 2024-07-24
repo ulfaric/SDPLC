@@ -66,9 +66,7 @@ async def inlet_control():
 async def tank_level_sensor():
     current_tank_level = await simPLC.read_variable("Tank Level")
     variable = [
-        variable
-        for variable in simPLC.variables
-        if variable.qualified_name == "Tank Level"
+        variable for variable in simPLC.nodes if variable.qualified_name == "Tank Level"
     ][0]
     logger.info(f"Tank Level Sensor: {current_tank_level}")
 
@@ -99,7 +97,6 @@ async def blender():
 
 if __name__ == "__main__":
     simPLC.init(
-        security_policy=[ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt],
         config_file="./example_config.yaml",
     )
     uvicorn.run("FasterAPI.app:app", host="0.0.0.0", port=8080)

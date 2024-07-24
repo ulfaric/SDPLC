@@ -1,34 +1,52 @@
-interface:
-  - ModBus
-  - OPCUA
-
 modbus:
+  address: 0.0.0.0
+  port: 1502
   byte_order: "big"
   word_order: "big"
 
+opcua:
+  url: "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/"
+  security_policy:
+    - 0
 
-variables:
+nodes:
   - qualified_name: "Inlet Valve"
     value: false
-    modbus_slave: 0
-    address: 0
-    type: "c"
+    modbus:
+      slave: 0
+      address: 0
+      type: "c"
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"
 
   - qualified_name: "Outlet Valve"
     value: true
-    modbus_slave: 0
-    address: 1
-    type: "c"
+    modbus:
+      slave: 0
+      address: 1
+      type: "c"
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"
 
   - qualified_name: "Tank Level"
     value: 0.0
-    modbus_slave: 0
-    address: 0
-    type: "i"
-    register_size: 64
+    modbus:
+      slave: 0
+      address: 0
+      type: "i"
+      register_size: 64
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"
 
   - qualified_name: "Blender"
     value: false
-    modbus_slave: 0
-    address: 2
-    type: "c"
+    modbus:
+      slave: 0
+      address: 2
+      type: "c"
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"

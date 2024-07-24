@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import List
-from .schemas import SimVariable
+from .schemas import Node
 from .sdplc import simPLC
 from Akatosh.universe import Mundus
 
@@ -21,7 +21,7 @@ def set_time_scale(scale: int):
     return {"details": f"Time scale set to {scale}."}
 
 
-@sim_plc_router.get("/variables", response_model=List[SimVariable], tags=["Sim PLC"])
+@sim_plc_router.get("/variables", response_model=List[Node], tags=["Sim PLC"])
 def get_variables():
     """
     get_variables Get the list of variables in the simulated PLC.
@@ -29,7 +29,7 @@ def get_variables():
     Get the list of variables in the simulated PLC. Note that there is no database to store the variables, so the variables are created and stored in memory. The value of variables are not persistent and will be reset when the server is restarted.
 
     """
-    return simPLC.variables
+    return simPLC.nodes
 
 
 @sim_plc_router.get("/variables/read", tags=["Sim PLC"])

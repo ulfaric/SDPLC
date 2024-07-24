@@ -161,17 +161,13 @@ class SDPLCOPCUAServer:
 
     def init(
         self,
-        endpoint: Optional[str] = None,
-        application_uri: Optional[str] = None,
+        endpoint: str = "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/",
     ) -> None:
         """Initialize the server with given endpoint and configuration file."""
 
         async def _config() -> None:
 
-            if application_uri:
-                await self.server.set_application_uri(uri=application_uri)
-            else:
-                await self.server.set_application_uri(uri="uri:ulfaric:SDPLC")
+            await self.server.set_application_uri(uri="uri:ulfaric:SDPLC")
 
             await self.server.set_build_info(
                 product_uri="uri:ulfaric:SDPLC",
@@ -182,13 +178,9 @@ class SDPLCOPCUAServer:
                 build_date=datetime.datetime.now(),
             )
 
-            self.server.set_server_name(name="SDICS SimPLC")
+            self.server.set_server_name(name="SDPLC OPCUA Server")
 
-        if endpoint:
             self.endpont = urlparse(url=endpoint)
-            self.server.set_endpoint(url=urlunparse(self.endpont))
-        else:
-            self.endpont = urlparse("opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/")
             self.server.set_endpoint(url=urlunparse(self.endpont))
 
         asyncio.run(main=self.server.init())
