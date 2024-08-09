@@ -25,7 +25,7 @@ nodes:
       node_qualified_name: "0"
 
   - qualified_name: "Outlet Valve"
-    value: true
+    value: false
     modbus:
       slave: 0
       address: 1

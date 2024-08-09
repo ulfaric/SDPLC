@@ -71,21 +71,6 @@ async def tank_level_sensor():
     logger.info(f"Tank Level Sensor: {current_tank_level}")
 
 
-@event(at=0, till=inf, label="Tank Level Simulation", priority=2)
-async def sim_tank_level():
-    global time
-    eclpsed_time = Mundus.time - time
-    inlet = await simPLC.read_node("Inlet Valve")
-    outlet = await simPLC.read_node("Outlet Valve")
-    current_tank_level = await simPLC.read_node("Tank Level")
-    if inlet is True:
-        current_tank_level += 10 * eclpsed_time
-    if outlet is True:
-        current_tank_level -= 5 * eclpsed_time
-    await simPLC.write_node("Tank Level", current_tank_level)
-    time = Mundus.time
-
-
 @event(at=0, till=inf, label="Blender", priority=2)
 async def blender():
     current_tank_level = await simPLC.read_node("Tank Level")
@@ -97,6 +82,6 @@ async def blender():
 
 if __name__ == "__main__":
     simPLC.init(
-        config_file="./example_config.yaml",
+        config_file="./example_controller.yaml",
     )
     uvicorn.run("FasterAPI.app:app", host="0.0.0.0", port=8088)
