@@ -94,10 +94,6 @@ class SDPLC:
                             logger.info("Starting OPC UA server...")
                             await self.opcuaServer.server.start()
 
-                if self.config.nodes:
-                    for node in self.config.nodes:
-                        self.add_Node(node)
-
                 if "ModBus" in self.config.north:
                     if self.config.modbus and isinstance(
                         self.config.modbus, ModBusIPConfig
@@ -169,12 +165,13 @@ class SDPLC:
                                     )
 
             if self.config.south:
-                if self.config.nodes:
-                    for node in self.config.nodes:
-                        self.add_Node(node)
                 if "ModBus" in self.config.south:
                     if self.config.modbus:
                         self.modbusClient.config(self.config.modbus)
+
+            if self.config.nodes:
+                for node in self.config.nodes:
+                    self.add_Node(node)
 
     def start(self) -> None:
         Akatosh.logger.setLevel(level=logging.INFO)
@@ -351,7 +348,6 @@ class SDPLC:
                 raise RuntimeError(f"Node {node} not found.")
             if "ModBus" in self.config.south:
                 if node.modbus:
-                    modbus_response = None
                     await self.modbusClient.connect()
                     if node.modbus.type == "c":
                         modbus_response = await self.modbusClient.read_coils(
@@ -413,9 +409,9 @@ class SDPLC:
                                     byte_order,
                                     word_order,
                                 )
-            if node.value is None:
-                raise RuntimeError("Failed to read variable value.")
             return node.value
+        else:
+            raise RuntimeError("No valid interface found.")
 
     async def write_node(self, qualified_name: str, value: int | float | bool):
         """
