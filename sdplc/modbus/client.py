@@ -1,8 +1,8 @@
 from pymodbus.client import (
-    AsyncModbusSerialClient,
-    AsyncModbusTcpClient,
-    AsyncModbusTlsClient,
-    AsyncModbusUdpClient,
+    ModbusSerialClient,
+    ModbusTcpClient,
+    ModbusTlsClient,
+    ModbusUdpClient,
 )
 from .schemas import ModBusIPConfig, ModBusSerialConfig
 import ssl
@@ -24,10 +24,10 @@ class SDPLCModBusClient:
         """
         self._config: ModBusIPConfig | ModBusSerialConfig | None = None
         self._client: (
-            AsyncModbusTcpClient
-            | AsyncModbusSerialClient
-            | AsyncModbusTlsClient
-            | AsyncModbusUdpClient
+            ModbusTcpClient
+            | ModbusSerialClient
+            | ModbusTlsClient
+            | ModbusUdpClient
             | None
         ) = None
 
@@ -42,7 +42,7 @@ class SDPLCModBusClient:
         """
         self._config = config
 
-    async def connect(self) -> None:
+    def connect(self) -> None:
         """
         connect initializes the ModBus client connection.
 
@@ -53,12 +53,12 @@ class SDPLCModBusClient:
         """
         if isinstance(self._config, ModBusIPConfig):
             if self._config.type == "tcp":
-                self._client = AsyncModbusTcpClient(
+                self._client = ModbusTcpClient(
                     host=self._config.address,
                     port=self._config.port,
                 )
             elif self._config.type == "udp":
-                self._client = AsyncModbusUdpClient(
+                self._client = ModbusUdpClient(
                     host=self._config.address,
                     port=self._config.port,
                 )
@@ -71,7 +71,7 @@ class SDPLCModBusClient:
                 if self._config.ca:
                     sslctx.load_verify_locations(self._config.ca)
 
-                self._client = AsyncModbusTlsClient(
+                self._client = ModbusTlsClient(
                     host=self._config.address,
                     port=self._config.port,
                     sslctx=sslctx,
@@ -79,7 +79,7 @@ class SDPLCModBusClient:
             else:
                 raise ValueError("ModBus client type is not supported")
         elif isinstance(self._config, ModBusSerialConfig):
-            self._client = AsyncModbusSerialClient(
+            self._client = ModbusSerialClient(
                 port=self._config.port,
                 baudrate=self._config.baudrate,
                 bytesize=self._config.bytesize,
@@ -88,9 +88,18 @@ class SDPLCModBusClient:
             )
         else:
             raise ValueError("ModBus client configuration is missing")
-        await self._client.connect()
+        self._client.connect()
 
-    async def read_input_registers(self, address: int, count: int, slave: int):
+    def close(self) -> None:
+        """
+        close closes the ModBus client connection.
+
+        This method must be called after finishing the read or write operations.
+        """
+        if self._client:
+            self._client.close()
+
+    def read_input_registers(self, address: int, count: int, slave: int):
         """
         read_input_registers a method to read input registers from a ModBus slave.
 
@@ -109,9 +118,9 @@ class SDPLCModBusClient:
         """
         if not self._client:
             raise ValueError("ModBus client is not connected")
-        return await self._client.read_input_registers(address, count, slave)
+        return self._client.read_input_registers(address, count, slave)
 
-    async def read_holding_registers(self, address: int, count: int, slave: int):
+    def read_holding_registers(self, address: int, count: int, slave: int):
         """
         read_holding_registers a method to read holding registers from a ModBus slave.
 
@@ -130,16 +139,16 @@ class SDPLCModBusClient:
         """
         if not self._client:
             raise ValueError("ModBus client is not connected")
-        return await self._client.read_holding_registers(address, count, slave)
+        return self._client.read_holding_registers(address, count, slave)
 
-    async def write_holding_registers(
+    def write_holding_registers(
         self, address: int, values: list[int], slave: int
     ):
         if not self._client:
             raise ValueError("ModBus client is not connected")
-        return await self._client.write_registers(address, values, slave)
+        return self._client.write_registers(address, values, slave)
 
-    async def read_coils(self, address: int, count: int, slave: int):
+    def read_coils(self, address: int, count: int, slave: int):
         """
         read_coils a method to read coils from a ModBus slave.
 
@@ -158,22 +167,22 @@ class SDPLCModBusClient:
         """
         if not self._client:
             raise ValueError("ModBus client is not connected")
-        return await self._client.read_coils(address, count, slave)
+        return self._client.read_coils(address, count, slave)
 
-    async def write_coils(self, address: int, values: list[bool], slave: int):
+    def write_coils(self, address: int, values: list[bool], slave: int):
         if not self._client:
             raise ValueError("ModBus client is not connected")
-        return await self._client.write_coils(address, values, slave)
+        return self._client.write_coils(address, values, slave)
 
-    async def write_coil(self, address: int, value: bool, slave: int):
+    def write_coil(self, address: int, value: bool, slave: int):
         if not self._client:
             raise ValueError("ModBus client is not connected")
-        return await self._client.write_coil(address, value, slave)
+        return self._client.write_coil(address, value, slave)
 
-    async def read_discrete_inputs(self, address: int, count: int, slave: int):
+    def read_discrete_inputs(self, address: int, count: int, slave: int):
         if not self._client:
             raise ValueError("ModBus client is not connected")
-        return await self._client.read_discrete_inputs(address, count, slave)
+        return self._client.read_discrete_inputs(address, count, slave)
 
 
 modbusClient = SDPLCModBusClient()

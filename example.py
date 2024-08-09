@@ -99,4 +99,4 @@ if __name__ == "__main__":
     simPLC.init(
         config_file="./example_config.yaml",
     )
-    uvicorn.run("FasterAPI.app:app", host="0.0.0.0", port=8080)
+    uvicorn.run("FasterAPI.app:app", host="0.0.0.0", port=8088)

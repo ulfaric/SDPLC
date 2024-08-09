@@ -48,7 +48,7 @@ class Node(BaseModel):
 
 
 class Config(BaseModel):
-    server: Optional[Literal["OPCUA", "ModBus"]] = "OPCUA"
+    server: Optional[Literal["OPCUA", "ModBus"]] = None
     client: Optional[Literal["OPCUA", "ModBus"]] = None
     modbus_client_config: Optional[ModBusIPConfig | ModBusSerialConfig] = None
     modbus_server_config: Optional[ModBusIPConfig] = None

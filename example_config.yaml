@@ -1,9 +1,9 @@
-server: "ModBus"
+client: "ModBus"
 # south: null
   
-modbus_server_config:
+modbus_client_config:
   type: "udp"
-  address: 0.0.0.0
+  address: 127.0.0.1
   port: 1502
   byte_order: "big"
   word_order: "big"

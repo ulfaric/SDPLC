@@ -35,10 +35,11 @@ class SDPLC:
         self.modbusClient = modbusClient
         self.nodes: List[Node] = list()
         self.config: Config = Config(
+            server="OPCUA",
             opcua_server_config=OPCUAConfig(
                 url="opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/",
                 security_policy=[ua.SecurityPolicyType.NoSecurity],
-            )
+            ),
         )
 
     def init(
@@ -54,13 +55,11 @@ class SDPLC:
                     f"Config file {config_file} not found, default configuration will be used instead."
                 )
             except yaml.YAMLError as e:
-                logger.warning(
-                    f"Invalid config file {config_file}, {e}. Default configuration will be used instead."
-                )
+                logger.warning(f"Invalid config file {config_file}, {e}.")
+                raise e
             except ValidationError as e:
-                logger.warning(
-                    f"Invalid config file {config_file}, {e}. Default configuration will be used instead."
-                )
+                logger.warning(f"Invalid config file {config_file}, {e}.")
+                raise e
 
             if self.config.server == "OPCUA":
                 if self.config.opcua_server_config:
@@ -155,6 +154,11 @@ class SDPLC:
                                     sslctx=sslctx,
                                 )
 
+            if self.config.client == "OPCUA":
+                pass
+            if self.config.client == "ModBus":
+                if self.config.modbus_client_config:
+                    self.modbusClient.config(self.config.modbus_client_config)
             if self.config.nodes:
                 for node in self.config.nodes:
                     self.add_Node(node)
@@ -245,9 +249,9 @@ class SDPLC:
                         )
                         if self.config.client == "ModBus":
                             if node.modbus:
-                                await self.modbusClient.connect()
+                                self.modbusClient.connect()
                                 if node.modbus.type == "c":
-                                    await self.modbusClient.write_coil(
+                                    self.modbusClient.write_coil(
                                         node.modbus.address,
                                         bool(node.value),
                                         node.modbus.slave,
@@ -272,7 +276,7 @@ class SDPLC:
                                             byte_order,
                                             word_order,
                                         )
-                                        await self.modbusClient.write_holding_registers(
+                                        self.modbusClient.write_holding_registers(
                                             node.modbus.address,
                                             values,
                                             node.modbus.slave,
@@ -281,6 +285,7 @@ class SDPLC:
                                         raise RuntimeError(
                                             f"Modbus client configuration is missing! Failed to write Node {node.qualified_name} value!"
                                         )
+                                self.modbusClient.close()
                                 logger.warning(
                                     f"Node {node.qualified_name} value pushed to external Modbus sink"
                                 )
@@ -351,8 +356,9 @@ class SDPLC:
             pass
         if self.config.client == "ModBus":
             if node.modbus:
+                self.modbusClient.connect()
                 if node.modbus.type == "c":
-                    modbus_response = await self.modbusClient.read_coils(
+                    modbus_response = self.modbusClient.read_coils(
                         node.modbus.address, 1, node.modbus.slave
                     )
                     if modbus_response.isError():
@@ -362,7 +368,7 @@ class SDPLC:
                     else:
                         node.value = bool(modbus_response.bits[0])
                 elif node.modbus.type == "d":
-                    modbus_response = await self.modbusClient.read_discrete_inputs(
+                    modbus_response = self.modbusClient.read_discrete_inputs(
                         node.modbus.address, 1, node.modbus.slave
                     )
                     if modbus_response.isError():
@@ -372,7 +378,7 @@ class SDPLC:
                     else:
                         node.value = bool(modbus_response.bits[0])
                 elif node.modbus.type == "h":
-                    modbus_response = await self.modbusClient.read_holding_registers(
+                    modbus_response = self.modbusClient.read_holding_registers(
                         node.modbus.address,
                         node.modbus.register_size // 16,
                         node.modbus.slave,
@@ -399,14 +405,14 @@ class SDPLC:
                             ),
                         )
                 elif node.modbus.type == "i":
-                    modbus_response = await self.modbusClient.read_input_registers(
+                    modbus_response = self.modbusClient.read_input_registers(
                         node.modbus.address,
                         node.modbus.register_size // 16,
                         node.modbus.slave,
                     )
                     if modbus_response.isError():
                         raise RuntimeError(
-                            f"Failed to read Node {node.qualified_name} value!"
+                            f"Failed to read Node {node.qualified_name} value! {modbus_response}"
                         )
                     else:
                         node.value = decoder(
@@ -425,6 +431,7 @@ class SDPLC:
                                 else Endian.LITTLE
                             ),
                         )
+                self.modbusClient.close()
         return node.value
 
     async def write_node(self, qualified_name: str, value: int | float | bool):
@@ -480,8 +487,9 @@ class SDPLC:
 
         if self.config.client == "ModBus":
             if node.modbus:
+                self.modbusClient.connect()
                 if node.modbus.type == "c":
-                    await self.modbusClient.write_coil(
+                    self.modbusClient.write_coil(
                         node.modbus.address, bool(node.value), node.modbus.slave
                     )
                 elif node.modbus.type == "h":
@@ -502,13 +510,14 @@ class SDPLC:
                             byte_order,
                             word_order,
                         )
-                        await self.modbusClient.write_holding_registers(
+                        self.modbusClient.write_holding_registers(
                             node.modbus.address, values, node.modbus.slave
                         )
                     else:
                         raise RuntimeError(
                             f"Modbus client configuration is missing! Failed to write Node {node.qualified_name} value!"
                         )
+                self.modbusClient.close()
 
 
 simPLC = SDPLC()
