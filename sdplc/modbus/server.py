@@ -2,7 +2,6 @@ import asyncio
 import logging
 import math
 from dataclasses import dataclass
-from turtle import st
 from typing import Dict, List, Literal, Optional
 
 import Akatosh
@@ -18,6 +17,7 @@ from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.payload import BinaryPayloadBuilder, BinaryPayloadDecoder
 from pymodbus.server import StartAsyncTcpServer
 
+from . import encoder, decoder
 from .. import logger
 
 
@@ -146,7 +146,7 @@ class ModBusSlave:
                 slave=self.id, address=address, value=value, size=size, type=type
             )
         )
-        bits = modbusServer.encoder(value, size)
+        bits = encoder(value, size, modbusServer.byte_order, modbusServer.word_order)
         self.holding_registers_memory[address : address + size // 16] = bits
         self.holding_registers_memory_occupancy[address : address + size // 16] = [
             True for _ in range(size // 16)
@@ -181,7 +181,7 @@ class ModBusSlave:
                 slave=self.id, address=address, value=value, size=size, type=type
             )
         )
-        bits = modbusServer.encoder(value, size)
+        bits = encoder(value, size, modbusServer.byte_order, modbusServer.word_order)
         self.input_registers_memory[address : address + size // 16] = bits
         self.input_registers_memory_occupancy[address : address + size // 16] = [
             True for _ in range(size // 16)
@@ -363,7 +363,7 @@ class SDPLCModBusServer:
         size = self.slaves[slave].holding_registers[address].size
         bits = register.getValues(address, size // 16)
         format = self.slaves[slave].holding_registers[address].type
-        return modbusServer.decoder(bits, format)
+        return decoder(bits, format, modbusServer.byte_order, modbusServer.word_order)
 
     def write_holding_register(
         self, slave: int, address: int, value: int | float
@@ -384,10 +384,10 @@ class SDPLCModBusServer:
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["h"]
         size = self.slaves[slave].holding_registers[address].size
         type = self.slaves[slave].holding_registers[address].type
-        bits = modbusServer.encoder(value, size)
+        bits = encoder(value, size, modbusServer.byte_order, modbusServer.word_order)
         for i in range(size // 16):
             register.setValues(address + i, bits[i])
-        return modbusServer.decoder(register.getValues(address, size // 16), type)
+        return decoder(register.getValues(address, size // 16), type, modbusServer.byte_order, modbusServer.word_order)
 
     def create_input_register(
         self,
@@ -426,7 +426,7 @@ class SDPLCModBusServer:
         size = self.slaves[slave].input_registers[address].size
         bits = register.getValues(address, size // 16)
         format = self.slaves[slave].input_registers[address].type
-        return modbusServer.decoder(bits, format)
+        return decoder(bits, format, modbusServer.byte_order, modbusServer.word_order)
 
     def write_input_register(
         self, slave: int, address: int, value: int | float
@@ -447,10 +447,10 @@ class SDPLCModBusServer:
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["i"]
         size = self.slaves[slave].input_registers[address].size
         type = self.slaves[slave].input_registers[address].type
-        bits = modbusServer.encoder(value, size)
+        bits = encoder(value, size, modbusServer.byte_order, modbusServer.word_order)
         for i in range(size // 16):
             register.setValues(address + i, bits[i])
-        return modbusServer.decoder(register.getValues(address, size // 16), type)
+        return decoder(register.getValues(address, size // 16), type, modbusServer.byte_order, modbusServer.word_order)
 
     def create_slave(self, id: int):
         """
@@ -502,66 +502,6 @@ class SDPLCModBusServer:
         Akatosh.logger.setLevel(logging.INFO)
         Mundus.enable_realtime()
         asyncio.run(Mundus.simulate(math.inf))
-
-    def encoder(self, value: int | float, size: Literal[16, 32, 64] = 16):
-        builder = BinaryPayloadBuilder(
-            byteorder=modbusServer.byte_order, wordorder=modbusServer.word_order
-        )
-        if isinstance(value, int):
-            if size == 16:
-                builder.add_16bit_int(value)
-            elif size == 32:
-                builder.add_32bit_int(value)
-            elif size == 64:
-                builder.add_64bit_int(value)
-        elif isinstance(value, float):
-            if size == 16:
-                raise ValueError("16 bit float is not supported.")
-            if size == 32:
-                builder.add_32bit_float(value)
-            elif size == 64:
-                builder.add_64bit_float(value)
-        return builder.to_registers()
-
-    def decoder(
-        self,
-        bits: List[int],
-        type: Literal["int", "float"] = "float",
-    ):
-        """
-        decoder Decode the bits to int or float.
-
-        Decode the bits to int or float based on the given size and format.
-
-        Args:
-            bits (List[int]): the bits to be decoded.
-            size (Literal[16, 32, 64], optional): the length of the bits. Defaults to 16.
-            format (Literal[&quot;int&quot;, &quot;float&quot;], optional): the type of the value. Defaults to "float".
-
-        Returns:
-            int | float: The decoded value.
-        """
-        decoder = BinaryPayloadDecoder.fromRegisters(
-            bits, byteorder=modbusServer.byte_order, wordorder=modbusServer.word_order
-        )
-        if type == "float":
-            if len(bits) ==1:
-                raise ValueError("16 bit float is not supported.")
-            elif len(bits) ==2:
-                return decoder.decode_32bit_float()
-            elif len(bits) == 4:
-                return decoder.decode_64bit_float()
-        if type == "int":
-            if len(bits)==1:
-                return decoder.decode_16bit_int()
-            elif len(bits) == 2:
-                return decoder.decode_32bit_int()
-            elif len(bits)  ==  4:
-                return decoder.decode_64bit_int()
-        raise ValueError(
-            f"Invalid length of bits,  expected 16, 32 or 64, but got {len(bits)}."
-        )
-
 
 # Create a singleton instance of the SimPLCModBus class
 modbusServer = SDPLCModBusServer()

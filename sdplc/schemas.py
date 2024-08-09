@@ -2,6 +2,11 @@ from typing import Literal, Optional, List
 
 from pydantic import BaseModel, field_validator, model_validator
 from asyncua import ua
+from .modbus.schemas import (
+    ModBusIPConfig,
+    ModBusSerialConfig,
+)
+from .opcua.schemas import OPCUAConfig
 
 
 class ModBusRegConfig(BaseModel):
@@ -42,28 +47,10 @@ class Node(BaseModel):
         return self
 
 
-class ModBusConfig(BaseModel):
-    address: str
-    port: int
-    byte_order: Literal["big", "little"] = "big"
-    word_order: Literal["big", "little"] = "big"
-
-
-class OPCUAConfig(BaseModel):
-    url: str
-    username: Optional[str] = None
-    password: Optional[str] = None
-    private_key: Optional[str] = None
-    certificate: Optional[str] = None
-    security_policy: Optional[List[ua.SecurityPolicyType]] = [
-        ua.SecurityPolicyType.NoSecurity
-    ]
-
-
 class Config(BaseModel):
     north: Optional[List[Literal["OPCUA", "ModBus"]]] = ["OPCUA", "ModBus"]
     south: Optional[List[Literal["OPCUA", "ModBus"]]] = None
-    modbus: Optional[ModBusConfig] = None
+    modbus: Optional[ModBusIPConfig | ModBusSerialConfig] = None
     opcua: Optional[OPCUAConfig] = None
     nodes: Optional[List[Node]] = None
 
@@ -102,5 +89,12 @@ class Config(BaseModel):
 
         if self.nodes and not self.north:
             raise ValueError("Nodes can not be defined without any north interface.")
+
+        if (
+            self.north
+            and "ModBus" in self.north
+            and not isinstance(self.modbus, ModBusIPConfig)
+        ):
+            raise ValueError("ModBus server configuration is not supported for north")
 
         return self
