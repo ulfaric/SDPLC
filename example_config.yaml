@@ -1,19 +1,17 @@
-north:
-  - "OPCUA"
-
-south:
-  - "ModBus"
+server: "ModBus"
+# south: null
   
-modbus:
+modbus_server_config:
+  type: "udp"
   address: 0.0.0.0
   port: 1502
   byte_order: "big"
   word_order: "big"
 
-opcua:
-  url: "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/"
-  security_policy:
-    - 0
+# opcua_server_config:
+#   url: "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/"
+#   security_policy:
+#     - 0
 
 nodes:
   - qualified_name: "Inlet Valve"

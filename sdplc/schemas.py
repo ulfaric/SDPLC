@@ -1,13 +1,11 @@
-from typing import Literal, Optional, List
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, field_validator, model_validator
 from asyncua import ua
+from pydantic import BaseModel, field_validator, model_validator
 
 from sdplc import modbus
-from .modbus.schemas import (
-    ModBusIPConfig,
-    ModBusSerialConfig,
-)
+
+from .modbus.schemas import ModBusIPConfig, ModBusSerialConfig
 from .opcua.schemas import OPCUAConfig
 
 
@@ -50,19 +48,19 @@ class Node(BaseModel):
 
 
 class Config(BaseModel):
-    server: Optional[Literal["OPCUA", "ModBus"]] = None
+    server: Optional[Literal["OPCUA", "ModBus"]] = "OPCUA"
     client: Optional[Literal["OPCUA", "ModBus"]] = None
     modbus_client_config: Optional[ModBusIPConfig | ModBusSerialConfig] = None
     modbus_server_config: Optional[ModBusIPConfig] = None
     opcua_client_config: Optional[OPCUAConfig] = None
-    opcua_server_Config: Optional[OPCUAConfig] = None
+    opcua_server_config: Optional[OPCUAConfig] = None
     nodes: Optional[List[Node]] = None
 
     @model_validator(mode="after")
     def check_interfaces(self):
         if self.server == "ModBus" and self.modbus_server_config is None:
             raise ValueError("ModBus server config is required.")
-        if self.server == "OPCUA" and self.opcua_server_Config is None:
+        if self.server == "OPCUA" and self.opcua_server_config is None:
             raise ValueError("OPCUA server config is required.")
         if self.client == "ModBus" and self.modbus_client_config is None:
             raise ValueError("ModBus client config is required.")
