@@ -1,3 +1,4 @@
+from ast import mod
 import asyncio
 import logging
 from math import inf
@@ -17,7 +18,7 @@ from pymodbus.server import (
     StartAsyncTlsServer,
 )
 
-from sdplc.modbus import decoder
+from sdplc.modbus import decoder, encoder
 
 from . import logger
 from .modbus.server import modbusServer
@@ -34,17 +35,10 @@ class SDPLC:
         self.modbusClient = modbusClient
         self.nodes: List[Node] = list()
         self.config: Config = Config(
-            north=["OPCUA", "ModBus"],
-            south=[],
-            modbus=ModBusIPConfig(
-                address="0.0.0.0",
-                port=1502,
-            ),
-            opcua=OPCUAConfig(
+            opcua_server_Config=OPCUAConfig(
                 url="opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/",
                 security_policy=[ua.SecurityPolicyType.NoSecurity],
-            ),
-            nodes=None,
+            )
         )
 
     def init(
@@ -68,106 +62,98 @@ class SDPLC:
                     f"Invalid config file {config_file}, {e}. Default configuration will be used instead."
                 )
 
-            if self.config.north:
-                if "OPCUA" in self.config.north:
-                    if self.config.opcua:
-                        self.opcuaServer.init(self.config.opcua.url)
+            if self.config.server == "OPCUA":
+                if self.config.opcua_server_Config:
+                    self.opcuaServer.init(self.config.opcua_server_Config.url)
 
-                        @event(at=0, till=0, label="Start OPC UA Server")
-                        async def start_opcua_server() -> NoReturn:
-                            if self.config.opcua is None:
-                                raise ValueError("OPCUA configuration is missing.")
+                    @event(at=0, till=0, label="Start OPC UA Server")
+                    async def start_opcua_server() -> NoReturn:
+                        if self.config.opcua_server_Config is None:
+                            raise ValueError("OPCUA configuration is missing.")
 
-                            self.opcuaServer.server.set_security_policy(
-                                self.config.opcua.security_policy
-                            )
-                            if (
-                                self.config.opcua.private_key
-                                and self.config.opcua.certificate
-                            ):
-                                await self.opcuaServer.server.load_private_key(
-                                    path_or_content=self.config.opcua.private_key
-                                )
-                                await self.opcuaServer.server.load_certificate(
-                                    path_or_content=self.config.opcua.certificate
-                                )
-                            logger.info("Starting OPC UA server...")
-                            await self.opcuaServer.server.start()
-
-                if "ModBus" in self.config.north:
-                    if self.config.modbus and isinstance(
-                        self.config.modbus, ModBusIPConfig
-                    ):
-                        self.modbusServer.config(
-                            byte_order=(
-                                Endian.BIG
-                                if self.config.modbus.byte_order == "big"
-                                else Endian.LITTLE
-                            ),
-                            word_order=(
-                                Endian.BIG
-                                if self.config.modbus.word_order == "big"
-                                else Endian.LITTLE
-                            ),
+                        self.opcuaServer.server.set_security_policy(
+                            self.config.opcua_server_Config.security_policy
                         )
+                        if (
+                            self.config.opcua_server_Config.private_key
+                            and self.config.opcua_server_Config.certificate
+                        ):
+                            await self.opcuaServer.server.load_private_key(
+                                path_or_content=self.config.opcua_server_Config.private_key
+                            )
+                            await self.opcuaServer.server.load_certificate(
+                                path_or_content=self.config.opcua_server_Config.certificate
+                            )
+                        logger.info("Starting OPC UA server...")
+                        await self.opcuaServer.server.start()
 
-                        @event(at=0, till=0, label="Start Modbus Server")
-                        async def start_modbus_server() -> NoReturn:
-                            if self.config.modbus is None:
-                                raise ValueError("ModBus configuration is missing.")
-                            self.modbusServer.init()
-                            if isinstance(self.config.modbus, ModBusIPConfig):
-                                if self.config.modbus.type == "tcp":
-                                    logger.info("Starting Modbus TCP server...")
-                                    await StartAsyncTcpServer(
-                                        context=self.modbusServer.server_context,
-                                        identity=self.modbusServer.identity,
-                                        address=(
-                                            self.config.modbus.address,
-                                            self.config.modbus.port,
-                                        ),
-                                    )
-                                elif self.config.modbus.type == "udp":
-                                    logger.info("Starting Modbus UDP server...")
-                                    await StartAsyncUdpServer(
-                                        context=self.modbusServer.server_context,
-                                        identity=self.modbusServer.identity,
-                                        address=(
-                                            self.config.modbus.address,
-                                            self.config.modbus.port,
-                                        ),
-                                    )
-                                elif self.config.modbus.type == "tls":
-                                    logger.info("Starting Modbus TLS server...")
-                                    sslctx = ssl.create_default_context(
-                                        ssl.Purpose.CLIENT_AUTH
-                                    )
-                                    if (
-                                        self.config.modbus.certificate
-                                        and self.config.modbus.key
-                                    ):
-                                        sslctx.load_cert_chain(
-                                            self.config.modbus.certificate,
-                                            self.config.modbus.key,
-                                        )
-                                    if self.config.modbus.ca:
-                                        sslctx.load_verify_locations(
-                                            self.config.modbus.ca
-                                        )
-                                    await StartAsyncTlsServer(
-                                        context=self.modbusServer.server_context,
-                                        identity=self.modbusServer.identity,
-                                        address=(
-                                            self.config.modbus.address,
-                                            self.config.modbus.port,
-                                        ),
-                                        sslctx=sslctx,
-                                    )
+            if self.config.server == "ModBus":
+                if self.config.modbus_server_config:
+                    self.modbusServer.config(
+                        byte_order=(
+                            Endian.BIG
+                            if self.config.modbus_server_config.byte_order == "big"
+                            else Endian.LITTLE
+                        ),
+                        word_order=(
+                            Endian.BIG
+                            if self.config.modbus_server_config.word_order == "big"
+                            else Endian.LITTLE
+                        ),
+                    )
 
-            if self.config.south:
-                if "ModBus" in self.config.south:
-                    if self.config.modbus:
-                        self.modbusClient.config(self.config.modbus)
+                    @event(at=0, till=0, label="Start Modbus Server")
+                    async def start_modbus_server() -> NoReturn:
+                        if self.config.modbus_server_config is None:
+                            raise ValueError("ModBus configuration is missing.")
+                        self.modbusServer.init()
+                        if isinstance(self.config.modbus_server_config, ModBusIPConfig):
+                            if self.config.modbus_server_config.type == "tcp":
+                                logger.info("Starting Modbus TCP server...")
+                                await StartAsyncTcpServer(
+                                    context=self.modbusServer.server_context,
+                                    identity=self.modbusServer.identity,
+                                    address=(
+                                        self.config.modbus_server_config.address,
+                                        self.config.modbus_server_config.port,
+                                    ),
+                                )
+                            elif self.config.modbus_server_config.type == "udp":
+                                logger.info("Starting Modbus UDP server...")
+                                await StartAsyncUdpServer(
+                                    context=self.modbusServer.server_context,
+                                    identity=self.modbusServer.identity,
+                                    address=(
+                                        self.config.modbus_server_config.address,
+                                        self.config.modbus_server_config.port,
+                                    ),
+                                )
+                            elif self.config.modbus_server_config.type == "tls":
+                                logger.info("Starting Modbus TLS server...")
+                                sslctx = ssl.create_default_context(
+                                    ssl.Purpose.CLIENT_AUTH
+                                )
+                                if (
+                                    self.config.modbus_server_config.certificate
+                                    and self.config.modbus_server_config.key
+                                ):
+                                    sslctx.load_cert_chain(
+                                        self.config.modbus_server_config.certificate,
+                                        self.config.modbus_server_config.key,
+                                    )
+                                if self.config.modbus_server_config.ca:
+                                    sslctx.load_verify_locations(
+                                        self.config.modbus_server_config.ca
+                                    )
+                                await StartAsyncTlsServer(
+                                    context=self.modbusServer.server_context,
+                                    identity=self.modbusServer.identity,
+                                    address=(
+                                        self.config.modbus_server_config.address,
+                                        self.config.modbus_server_config.port,
+                                    ),
+                                    sslctx=sslctx,
+                                )
 
             if self.config.nodes:
                 for node in self.config.nodes:
@@ -191,7 +177,7 @@ class SDPLC:
             ValueError: raised when the value type is invalid for the variable type, or when the register size is invalid for holding and input registers.
         """
         self.nodes.append(node)
-        if self.config.north and "OPCUA" in self.config.north:
+        if self.config.server == "OPCUA":
             # check if the OPC UA namespace exists
             # Each modbus slave has its own namespace and a root node with the slave id as qualified name
             if node.opcua:
@@ -209,7 +195,7 @@ class SDPLC:
                     self.opcuaServer.nodes[node.opcua.node_qualified_name],
                 )
 
-        if self.config.north and "ModBus" in self.config.north:
+        if self.config.server == "ModBus":
             if node.modbus:
                 # check if the modbus slave exists
                 if node.modbus.slave not in self.modbusServer.slaves.keys():
@@ -247,73 +233,91 @@ class SDPLC:
             priority=1,
         )
         async def sync_node():
-
-            if self.config.north:
-                # get OPC UA value and ModBus value
+            if self.config.server == "OPCUA":
                 opcua_value = await self.opcuaServer.variables[
                     node.qualified_name
                 ].read_value()
-                modbus_value = None
-                if "ModBus" in self.config.north:
-                    if node.modbus:
-                        if node.modbus.type == "c":
-                            modbus_value = self.modbusServer.read_coil(
-                                node.modbus.slave, node.modbus.address
-                            )
-                        elif node.modbus.type == "d":
-                            modbus_value = self.modbusServer.read_discrete_input(
-                                node.modbus.slave, node.modbus.address
-                            )
-                        elif node.modbus.type == "h":
-                            modbus_value = self.modbusServer.read_holding_register(
-                                node.modbus.slave, node.modbus.address
-                            )
-                        elif node.modbus.type == "i":
-                            modbus_value = self.modbusServer.read_input_register(
-                                node.modbus.slave, node.modbus.address
-                            )
-
-                # if OPC UA value is different from the node value, update the node value and the ModBus value
-                if opcua_value != node.value:
+                if opcua_value is not None and opcua_value != node.value:
                     node.value = opcua_value
-                    if self.config.north and "ModBus" in self.config.north:
+                    logger.warning(
+                        f"Node {node.qualified_name} value updated to {node.value} by external OPC UA source"
+                    )
+                    if self.config.client == "ModBus":
                         if node.modbus:
+                            await self.modbusClient.connect()
                             if node.modbus.type == "c":
-                                self.modbusServer.write_coil(
-                                    node.modbus.slave,
+                                await self.modbusClient.write_coil(
                                     node.modbus.address,
                                     bool(node.value),
-                                )
-                            elif node.modbus.type == "d":
-                                self.modbusServer.write_discrete_input(
                                     node.modbus.slave,
-                                    node.modbus.address,
-                                    bool(node.value),
                                 )
                             elif node.modbus.type == "h":
-                                self.modbusServer.write_holding_register(
-                                    node.modbus.slave, node.modbus.address, node.value
-                                )
-                            elif node.modbus.type == "i":
-                                self.modbusServer.write_input_register(
-                                    node.modbus.slave, node.modbus.address, node.value
-                                )
-                    logger.warning(
-                        f"Node  {node.qualified_name} OPCUA value updated to {opcua_value} by external source"
+                                if self.modbusClient._config:
+                                    byte_order = (
+                                        Endian.BIG
+                                        if self.modbusClient._config.byte_order == "big"
+                                        else Endian.LITTLE
+                                    )
+                                    word_order = (
+                                        Endian.BIG
+                                        if self.modbusClient._config.word_order == "big"
+                                        else Endian.LITTLE
+                                    )
+                                    values = encoder(
+                                        node.value,
+                                        node.modbus.register_size,
+                                        byte_order,
+                                        word_order,
+                                    )
+                                    await self.modbusClient.write_holding_registers(
+                                        node.modbus.address, values, node.modbus.slave
+                                    )
+                                else:
+                                    raise RuntimeError(
+                                        f"Modbus client configuration is missing! Failed to write Node {node.qualified_name} value!"
+                                    )
+                            logger.warning(
+                                f"Node {node.qualified_name} value pushed to external Modbus sink"
+                            )
+                else:
+                    raise RuntimeError(
+                        f"Fail to read Node {node.qualified_name} OPCUA value!"
                     )
 
-                # if ModBus value is different from the node value, update the node value and the OPC UA value
-                if modbus_value is not None:
-                    if modbus_value != node.value:
-                        node.value = modbus_value
-                        if self.config.north and "OPCUA" in self.config.north:
-                            if node.opcua:
-                                await self.opcuaServer.variables[
-                                    node.qualified_name
-                                ].write_value(node.value)
-                        logger.warning(
-                            f"Node  {node.qualified_name} Modbus value updated to {modbus_value} by external source"
+            if self.config.server == "ModBus":
+                if node.modbus:
+                    modbus_value = None
+                    if node.modbus.type == "c":
+                        modbus_value = self.modbusServer.read_coil(
+                            node.modbus.slave, node.modbus.address
                         )
+                    elif node.modbus.type == "d":
+                        modbus_value = self.modbusServer.read_discrete_input(
+                            node.modbus.slave, node.modbus.address
+                        )
+                    elif node.modbus.type == "h":
+                        modbus_value = self.modbusServer.read_holding_register(
+                            node.modbus.slave, node.modbus.address
+                        )
+                    elif node.modbus.type == "i":
+                        modbus_value = self.modbusServer.read_input_register(
+                            node.modbus.slave, node.modbus.address
+                        )
+                    if modbus_value is not None and modbus_value != node.value:
+                        node.value = modbus_value
+                        logger.warning(
+                            f"Node {node.qualified_name} value updated to {node.value} by external Modbus source"
+                        )
+                        if self.config.client == "OPCUA":
+                            pass
+                    else:
+                        raise RuntimeError(
+                            f"Fail to read Node {node.qualified_name} Modbus value!"
+                        )
+                else:
+                    raise RuntimeError(
+                        f"Node {node.qualified_name} has no Modbus config but Modbus is set as the server!"
+                    )
 
     async def read_node(self, qualified_name: str):
         """
@@ -331,87 +335,91 @@ class SDPLC:
         Returns:
             bool | int | float: the value of the variable.
         """
-        if self.config.north:
-            node = next(
-                (node for node in self.nodes if node.qualified_name == qualified_name),
-                None,
-            )
-            if node is None:
-                raise RuntimeError(f"Node {node} not found.")
-            return node.value
-        elif self.config.south:
-            node = next(
-                (node for node in self.nodes if node.qualified_name == qualified_name),
-                None,
-            )
-            if node is None:
-                raise RuntimeError(f"Node {node} not found.")
-            if "ModBus" in self.config.south:
-                if node.modbus:
-                    await self.modbusClient.connect()
-                    if node.modbus.type == "c":
-                        modbus_response = await self.modbusClient.read_coils(
-                            node.modbus.slave, 1, node.modbus.address
+        node = next(
+            (node for node in self.nodes if node.qualified_name == qualified_name),
+            None,
+        )
+        if node is None:
+            raise RuntimeError(f"Node {node} not found.")
+        if self.config.client == "OPCUA":
+            pass
+        if self.config.client == "ModBus":
+            if node.modbus:
+                if node.modbus.type == "c":
+                    modbus_response = await self.modbusClient.read_coils(
+                        node.modbus.address, 1, node.modbus.slave
+                    )
+                    if modbus_response.isError():
+                        raise RuntimeError(
+                            f"Failed to read Node {node.qualified_name} value!"
                         )
+                    else:
                         node.value = bool(modbus_response.bits[0])
-                    elif node.modbus.type == "d":
-                        modbus_response = await self.modbusClient.read_discrete_inputs(
-                            node.modbus.slave, 1, node.modbus.address
+                elif node.modbus.type == "d":
+                    modbus_response = await self.modbusClient.read_discrete_inputs(
+                        node.modbus.address, 1, node.modbus.slave
+                    )
+                    if modbus_response.isError():
+                        raise RuntimeError(
+                            f"Failed to read Node {node.qualified_name} value!"
                         )
+                    else:
                         node.value = bool(modbus_response.bits[0])
-                    elif node.modbus.type == "h":
-                        modbus_response = (
-                            await self.modbusClient.read_holding_registers(
-                                node.modbus.slave,
-                                node.modbus.register_size // 16,
-                                node.modbus.address,
-                            )
+                elif node.modbus.type == "h":
+                    modbus_response = await self.modbusClient.read_holding_registers(
+                        node.modbus.address,
+                        node.modbus.register_size // 16,
+                        node.modbus.slave,
+                    )
+                    if modbus_response.isError():
+                        raise RuntimeError(
+                            f"Failed to read Node {node.qualified_name} value!"
                         )
-                        if self.modbusClient._config:
-                            byte_order = (
+                    else:
+                        node.value = decoder(
+                            modbus_response.registers,
+                            "int" if isinstance(node.value, int) else "float",
+                            (
                                 Endian.BIG
-                                if self.modbusClient._config.byte_order == "big"
+                                if self.modbusClient._config
+                                and self.modbusClient._config.byte_order == "big"
                                 else Endian.LITTLE
-                            )
-                            word_order = (
+                            ),
+                            (
                                 Endian.BIG
-                                if self.modbusClient._config.word_order == "big"
+                                if self.modbusClient._config
+                                and self.modbusClient._config.word_order == "big"
                                 else Endian.LITTLE
-                            )
-                            if isinstance(node.value, int):
-                                node.value = decoder(
-                                    modbus_response.registers,
-                                    "int",
-                                    byte_order,
-                                    word_order,
-                                )
-                    elif node.modbus.type == "i":
-                        modbus_response = await self.modbusClient.read_input_registers(
-                            node.modbus.slave,
-                            node.modbus.register_size // 16,
-                            node.modbus.address,
+                            ),
                         )
-                        if self.modbusClient._config:
-                            byte_order = (
+                elif node.modbus.type == "i":
+                    modbus_response = await self.modbusClient.read_input_registers(
+                        node.modbus.address,
+                        node.modbus.register_size // 16,
+                        node.modbus.slave,
+                    )
+                    if modbus_response.isError():
+                        raise RuntimeError(
+                            f"Failed to read Node {node.qualified_name} value!"
+                        )
+                    else:
+                        node.value = decoder(
+                            modbus_response.registers,
+                            "int" if isinstance(node.value, int) else "float",
+                            (
                                 Endian.BIG
-                                if self.modbusClient._config.byte_order == "big"
+                                if self.modbusClient._config
+                                and self.modbusClient._config.byte_order == "big"
                                 else Endian.LITTLE
-                            )
-                            word_order = (
+                            ),
+                            (
                                 Endian.BIG
-                                if self.modbusClient._config.word_order == "big"
+                                if self.modbusClient._config
+                                and self.modbusClient._config.word_order == "big"
                                 else Endian.LITTLE
-                            )
-                            if isinstance(node.value, int):
-                                node.value = decoder(
-                                    modbus_response.registers,
-                                    "int",
-                                    byte_order,
-                                    word_order,
-                                )
-            return node.value
-        else:
-            raise RuntimeError("No valid interface found.")
+                            ),
+                        )
+        return node.value
 
     async def write_node(self, qualified_name: str, value: int | float | bool):
         """
@@ -433,12 +441,12 @@ class SDPLC:
         if node is None:
             raise ValueError(f"Node {node} not found.")
         node.value = value
-        if self.config.north and "OPCUA" in self.config.north:
+        if self.config.server and "OPCUA" in self.config.server:
             if node.opcua:
                 await self.opcuaServer.variables[node.qualified_name].write_value(
                     node.value
                 )
-        if self.config.north and "ModBus" in self.config.north:
+        if self.config.server and "ModBus" in self.config.server:
             if node.modbus:
                 if node.modbus.type == "c":
                     self.modbusServer.write_coil(

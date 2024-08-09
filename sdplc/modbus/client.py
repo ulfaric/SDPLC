@@ -132,6 +132,13 @@ class SDPLCModBusClient:
             raise ValueError("ModBus client is not connected")
         return await self._client.read_holding_registers(address, count, slave)
 
+    async def write_holding_registers(
+        self, address: int, values: list[int], slave: int
+    ):
+        if not self._client:
+            raise ValueError("ModBus client is not connected")
+        return await self._client.write_registers(address, values, slave)
+
     async def read_coils(self, address: int, count: int, slave: int):
         """
         read_coils a method to read coils from a ModBus slave.
@@ -167,5 +174,6 @@ class SDPLCModBusClient:
         if not self._client:
             raise ValueError("ModBus client is not connected")
         return await self._client.read_discrete_inputs(address, count, slave)
+
 
 modbusClient = SDPLCModBusClient()

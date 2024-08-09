@@ -2,6 +2,8 @@ from typing import Literal, Optional, List
 
 from pydantic import BaseModel, field_validator, model_validator
 from asyncua import ua
+
+from sdplc import modbus
 from .modbus.schemas import (
     ModBusIPConfig,
     ModBusSerialConfig,
@@ -48,53 +50,24 @@ class Node(BaseModel):
 
 
 class Config(BaseModel):
-    north: Optional[List[Literal["OPCUA", "ModBus"]]] = ["OPCUA", "ModBus"]
-    south: Optional[List[Literal["OPCUA", "ModBus"]]] = None
-    modbus: Optional[ModBusIPConfig | ModBusSerialConfig] = None
-    opcua: Optional[OPCUAConfig] = None
+    server: Optional[Literal["OPCUA", "ModBus"]] = None
+    client: Optional[Literal["OPCUA", "ModBus"]] = None
+    modbus_client_config: Optional[ModBusIPConfig | ModBusSerialConfig] = None
+    modbus_server_config: Optional[ModBusIPConfig] = None
+    opcua_client_config: Optional[OPCUAConfig] = None
+    opcua_server_Config: Optional[OPCUAConfig] = None
     nodes: Optional[List[Node]] = None
 
     @model_validator(mode="after")
     def check_interfaces(self):
-        if not self.north and not self.south:
-            raise ValueError("At least one interface must be enabled")
-
-        if (
-            self.north
-            and self.south
-            and "OPCUA" in self.north
-            and "OPCUA" in self.south
-        ):
-            raise ValueError("OPCUA cannot be enabled on both interfaces")
-
-        if (
-            self.north
-            and self.south
-            and "ModBus" in self.north
-            and "ModBus" in self.south
-        ):
-            raise ValueError("ModBus cannot be enabled on both interfaces")
-
-        if self.north and "OPCUA" in self.north and not self.opcua:
-            raise ValueError("OPCUA configuration is missing for north interface")
-
-        if self.south and "OPCUA" in self.south and not self.opcua:
-            raise ValueError("OPCUA configuration is missing for south interface")
-
-        if self.north and "ModBus" in self.north and not self.modbus:
-            raise ValueError("ModBus configuration is missing for north interface")
-
-        if self.south and "ModBus" in self.south and not self.modbus:
-            raise ValueError("ModBus configuration is missing for south interface")
-
-        if self.nodes and not self.north:
-            raise ValueError("Nodes can not be defined without any north interface.")
-
-        if (
-            self.north
-            and "ModBus" in self.north
-            and not isinstance(self.modbus, ModBusIPConfig)
-        ):
-            raise ValueError("ModBus server configuration is not supported for north")
-
+        if self.server == "ModBus" and self.modbus_server_config is None:
+            raise ValueError("ModBus server config is required.")
+        if self.server == "OPCUA" and self.opcua_server_Config is None:
+            raise ValueError("OPCUA server config is required.")
+        if self.client == "ModBus" and self.modbus_client_config is None:
+            raise ValueError("ModBus client config is required.")
+        if self.client == "OPCUA" and self.opcua_client_config is None:
+            raise ValueError("OPCUA client config is required.")
+        if self.client == self.server:
+            raise ValueError("Server and client cannot be the same interface.")
         return self
