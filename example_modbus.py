@@ -1,14 +1,26 @@
+import logging
 from sdplc.modbus.server import modbusServer
 
-modbusServer.create_slave(0)
+# Enable debug logging for pymodbus
+logging.basicConfig()
+logging.getLogger('pymodbus').setLevel(logging.DEBUG)
 
+modbusServer.create_slave(1)
+
+# Create coils
 for i in range(0, 10):
-    modbusServer.create_coil(0, i, False)
+    modbusServer.create_coil(1, i, False)
 
+# Create discrete inputs
 for i in range(0, 10):
-    modbusServer.create_discrete_input(0, i, False)
+    modbusServer.create_discrete_input(1, i, False)
 
-modbusServer.create_holding_register(0, 0, 0, 64)
-modbusServer.create_input_register(0, 0, 1000, 64)
+# Create holding registers
+for i in range(0, 10):
+    modbusServer.create_holding_register(1, i, 0, 16)
+
+# Create input registers
+for i in range(0, 10):
+    modbusServer.create_input_register(1, i, 0, 16)
 
 modbusServer.start()
