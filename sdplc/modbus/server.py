@@ -360,9 +360,10 @@ class SDPLCModBusServer:
             int | float: the value of the holding register.
         """
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["h"]
-        size = self.slaves[slave].holding_registers[address].size
+        holding_register = [holding_register for holding_register in self.slaves[slave].holding_registers if holding_register.address == address][0]
+        size = holding_register.size
         bits = register.getValues(address, size // 16)
-        format = self.slaves[slave].holding_registers[address].type
+        format = holding_register.type
         return decoder(bits, format, modbusServer.byte_order, modbusServer.word_order)
 
     def write_holding_register(
@@ -382,8 +383,9 @@ class SDPLCModBusServer:
             int | float: the value of the holding register to verify the write operation.
         """
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["h"]
-        size = self.slaves[slave].holding_registers[address].size
-        type = self.slaves[slave].holding_registers[address].type
+        holding_register = [holding_register for holding_register in self.slaves[slave].holding_registers if holding_register.address == address][0]
+        size = holding_register.size
+        type = holding_register.type
         bits = encoder(value, size, modbusServer.byte_order, modbusServer.word_order)
         for i in range(size // 16):
             register.setValues(address + i, bits[i])
@@ -423,9 +425,10 @@ class SDPLCModBusServer:
             int | float: the value of the input register.
         """
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["i"]
-        size = self.slaves[slave].input_registers[address].size
+        input_register = [input_register for input_register in self.slaves[slave].input_registers if input_register.address == address][0]
+        size = input_register.size
         bits = register.getValues(address, size // 16)
-        format = self.slaves[slave].input_registers[address].type
+        format = input_register.type
         return decoder(bits, format, modbusServer.byte_order, modbusServer.word_order)
 
     def write_input_register(
@@ -445,8 +448,9 @@ class SDPLCModBusServer:
             int | float: the value of the input register to verify the write operation.
         """
         register: ModbusSequentialDataBlock = self.slaves_context[slave].store["i"]
-        size = self.slaves[slave].input_registers[address].size
-        type = self.slaves[slave].input_registers[address].type
+        input_register = [input_register for input_register in self.slaves[slave].input_registers if input_register.address == address][0]
+        size = input_register.size
+        type = input_register.type
         bits = encoder(value, size, modbusServer.byte_order, modbusServer.word_order)
         for i in range(size // 16):
             register.setValues(address + i, bits[i])

@@ -1,0 +1,24 @@
+server: "ModBus"
+
+modbus_server_config:
+  type: "udp"
+  address: 0.0.0.0
+  port: 1502
+  byte_order: "big"
+  word_order: "big"
+
+nodes:
+  - qualified_name: "Recording"
+    value: false
+    modbus:
+      slave: 0
+      address: 0
+      type: "c"
+
+  - qualified_name: "SineWave"
+    value: 0.0
+    modbus:
+      slave: 0
+      address: 1
+      type: "h"
+      register_size: 64
