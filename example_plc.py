@@ -1,4 +1,3 @@
-import socket
 from math import inf
 
 import uvicorn

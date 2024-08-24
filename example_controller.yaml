@@ -1,5 +1,4 @@
 client: "ModBus"
-# south: null
   
 modbus_client_config:
   type: "udp"
@@ -8,10 +7,6 @@ modbus_client_config:
   byte_order: "big"
   word_order: "big"
 
-# opcua_server_config:
-#   url: "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/"
-#   security_policy:
-#     - 0
 
 nodes:
   - qualified_name: "Inlet Valve"

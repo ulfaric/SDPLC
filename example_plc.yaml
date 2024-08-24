@@ -1,17 +1,11 @@
 server: "ModBus"
-# south: null
-  
+
 modbus_server_config:
   type: "udp"
   address: 0.0.0.0
   port: 1502
   byte_order: "big"
   word_order: "big"
-
-# opcua_server_config:
-#   url: "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/"
-#   security_policy:
-#     - 0
 
 nodes:
   - qualified_name: "Inlet Valve"
