@@ -25,14 +25,13 @@ async def recording():
             file.write(f"{current_time},{amplitude}\n")
 
 
-@event(at=0, step=0.02, till=inf, label="Tank Level Simulation", priority=2)
+@event(at=0, step=0.02, till=inf, label="Sine Wave Sensor", priority=2)
 async def sine_wave_reading():
     recording = await simPLC.read_node("Recording")
     if recording is True:
         amplitude = sin(2 * pi * 1 * Mundus.time)
         await simPLC.write_node("SineWave", amplitude)
         logger.info(f"Sine Wave: {amplitude}")
-
 
 
 if __name__ == "__main__":
