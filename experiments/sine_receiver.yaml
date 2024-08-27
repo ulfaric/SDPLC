@@ -11,14 +11,14 @@ nodes:
   - qualified_name: "Recording"
     value: false
     modbus:
-      slave: 0
+      slave: 1
       address: 0
       type: "c"
 
   - qualified_name: "SineWave"
     value: 0.0
     modbus:
-      slave: 0
+      slave: 1
       address: 1
       type: "h"
       register_size: 64

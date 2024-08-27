@@ -9,7 +9,7 @@ repository = "https://github.com/ulfaric/SDPLC"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pymodbus = "=3.6.8"
+pymodbus = "^3.6.8"
 opentelemetry-api = "^1.24.0"
 opentelemetry-sdk = "^1.24.0"
 opentelemetry-exporter-otlp = "^1.24.0"

@@ -465,6 +465,8 @@ class SDPLCModBusServer:
         Args:
             id (int): the id of the slave.
         """
+        if id == 0:
+            raise ValueError("Slave id 0 is reserved for broadcast.")
         slave = ModBusSlave(id=id)
         self.slaves[id] = slave
         logger.info(f"Created ModBus slave {id}.")

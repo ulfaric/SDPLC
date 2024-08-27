@@ -1481,22 +1481,22 @@ yaml = ["pyyaml (>=6.0.1)"]
 
 [[package]]
 name = "pymodbus"
-version = "3.6.8"
+version = "3.7.0"
 description = "A fully featured modbus protocol stack in python"
 optional = false
-python-versions = ">=3.8.0"
+python-versions = ">=3.9.0"
 files = [
-    {file = "pymodbus-3.6.8-py3-none-any.whl", hash = "sha256:8d55d1eaa8b7216d5da7492f5b610e8154d5d3bf6f4a5b3080319fd2c33b59b9"},
-    {file = "pymodbus-3.6.8.tar.gz", hash = "sha256:abb214716b56fc62bc0d5d9d964e2249439341746287e918d175f0e3ee241407"},
+    {file = "pymodbus-3.7.0-py3-none-any.whl", hash = "sha256:4d4caedea604e294d9a39248dcac05e903e6143e5adfe49aa7edb79d461527e1"},
+    {file = "pymodbus-3.7.0.tar.gz", hash = "sha256:5c772babaa61a65ff908293faa668aedcd9d9e10f4bcf5c77a8fe51a6fd9ed47"},
 ]
 
 [package.extras]
 all = ["pymodbus[development,documentation,repl,serial,simulator]"]
-development = ["build (>=1.1.1)", "codespell (>=2.2.6)", "coverage (>=7.4.3)", "mypy (>=1.9.0)", "pylint (>=3.1.0)", "pytest (>=8.1.0)", "pytest-asyncio (>=0.23.5.post1)", "pytest-cov (>=4.1.0)", "pytest-profiling (>=1.7.0)", "pytest-timeout (>=2.3.1)", "pytest-xdist (>=3.5.0)", "ruff (>=0.3.3)", "twine (>=5.0.0)", "types-Pygments", "types-pyserial"]
-documentation = ["Sphinx (>=5.3.0)", "recommonmark (>=0.7.1)", "sphinx-rtd-theme (>=1.1.1)"]
+development = ["build (>=1.2.1)", "codespell (>=2.3.0)", "coverage (>=7.6.0)", "mypy (>=1.10.1)", "pylint (>=3.2.5)", "pytest (>=8.2.2)", "pytest-asyncio (>=0.23.8)", "pytest-cov (>=5.0.0)", "pytest-profiling (>=1.7.0)", "pytest-timeout (>=2.3.1)", "pytest-xdist (>=3.6.1)", "ruff (>=0.5.3)", "twine (>=5.1.1)", "types-Pygments", "types-pyserial"]
+documentation = ["Sphinx (>=7.3.7)", "recommonmark (>=0.7.1)", "sphinx-rtd-theme (>=2.0.0)"]
 repl = ["pymodbus-repl (>=2.0.3)"]
 serial = ["pyserial (>=3.5)"]
-simulator = ["aiohttp (>=3.8.6)", "aiohttp (>=3.9.0b0)"]
+simulator = ["aiohttp (>=3.8.6)", "aiohttp (>=3.9.5)"]
 
 [[package]]
 name = "pyopenssl"
@@ -2321,4 +2321,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "cbaaa9c1440e458bff8ccd9ba0f0330a80a31e2457f61520a4cab3452e517336"
+content-hash = "266fb18e2099336f73f4e94fee78bcaa24e378db969613600677aa9c6a78639c"
