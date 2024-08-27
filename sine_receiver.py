@@ -1,3 +1,4 @@
+import logging
 from math import inf
 from datetime import datetime, timezone
 import uvicorn
@@ -8,8 +9,7 @@ from sdplc.sdplc import simPLC
 from sdplc.router import sim_plc_router
 
 app.include_router(sim_plc_router)
-
-time = 0
+logger.setLevel(logging.INFO)
 
 
 @event(at=0, step=0.1, till=inf, label="Recording", priority=2)

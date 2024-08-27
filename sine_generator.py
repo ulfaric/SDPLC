@@ -10,28 +10,37 @@ from sdplc.router import sim_plc_router
 
 app.include_router(sim_plc_router)
 
-time = 0
+
+@event(at=0, till=0, once=True, label="Start", priority=2)
+async def start_recording():
+    await simPLC.write_node("Recording", True)
 
 
-@event(at=0, step=0.1,till=inf, label="Recording", priority=2)
+@event(at=0, step=0.1, till=30, label="Recording", priority=2)
 async def recording():
-    recording = await simPLC.read_node("Recording")
-    if recording is False:
-        await simPLC.write_node("Recording", True)
-    else:
-        with open("sine_wave_data_generator.txt", "a") as file:
-            amplitude = await simPLC.read_node("SineWave")
-            current_time = datetime.now(timezone.utc).isoformat()
-            file.write(f"{current_time},{amplitude}\n")
+    current_time = datetime.now(timezone.utc).isoformat()
+    with open("sine_wave_data_generator.txt", "a") as file:
+        amplitude = [
+            node.value for node in simPLC.nodes if node.qualified_name == "SineWave"
+        ][0]
+        file.write(f"{current_time},{amplitude}\n")
 
 
-@event(at=0, step=0.02, till=inf, label="Sine Wave Sensor", priority=2)
+@event(at=30, till=30, once=True, label="Stop", priority=3)
+async def stop_recording():
+    await simPLC.write_node("Recording", False)
+
+
+@event(at=0, till=30, label="Sine Wave Generator", priority=2)
+async def sine_wave_generator():
+    amplitude = sin(2 * pi * 0.25 * Mundus.time)
+    await simPLC.write_node("SineWave", amplitude)
+
+
+@event(at=0, step=1, till=inf, label="Sine Wave Sensor", priority=2)
 async def sine_wave_reading():
-    recording = await simPLC.read_node("Recording")
-    if recording is True:
-        amplitude = sin(2 * pi * 1 * Mundus.time)
-        await simPLC.write_node("SineWave", amplitude)
-        logger.info(f"Sine Wave: {amplitude}")
+    amplitude = await simPLC.read_node("SineWave")
+    logger.info(f"Sine Wave: {amplitude}")
 
 
 if __name__ == "__main__":
