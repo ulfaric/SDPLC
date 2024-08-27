@@ -24,6 +24,7 @@ from . import logger
 from .modbus.server import modbusServer
 from .modbus.client import modbusClient
 from .opcua.server import opcuaServer
+from .opcua.client import opcuaClient
 from .schemas import Config, ModBusIPConfig, Node, OPCUAConfig
 
 
@@ -31,6 +32,7 @@ class SDPLC:
 
     def __init__(self) -> None:
         self.opcuaServer = opcuaServer
+        self.opcuaClient = opcuaClient
         self.modbusServer = modbusServer
         self.modbusClient = modbusClient
         self.nodes: List[Node] = list()
@@ -155,7 +157,10 @@ class SDPLC:
                                 )
 
             if self.config.client == "OPCUA":
-                pass
+                if self.config.opcua_client_config:
+                    asyncio.run(
+                        self.opcuaClient.config(self.config.opcua_client_config)
+                    )
             if self.config.client == "ModBus":
                 if self.config.modbus_client_config:
                     self.modbusClient.config(self.config.modbus_client_config)
@@ -199,6 +204,18 @@ class SDPLC:
                     self.opcuaServer.nodes[node.opcua.node_qualified_name],
                 )
 
+        if self.config.client == "OPCUA":
+            asyncio.run(self.opcuaClient.connect())
+            if node.opcua:
+                node.opcua.node_id = asyncio.run(
+                    self.opcuaClient.browse_and_find_node(
+                        node.opcua.node_qualified_name
+                    )
+                )
+                logger.debug(
+                    f"AllocatedNode {node.qualified_name} OPCUA with node id: {node.opcua.node_id}"
+                )
+                
         if self.config.server == "ModBus":
             if node.modbus:
                 # check if the modbus slave exists
@@ -353,7 +370,12 @@ class SDPLC:
         if node is None:
             raise RuntimeError(f"Node {node} not found.")
         if self.config.client == "OPCUA":
-            pass
+            if node.opcua:
+                if node.opcua.node_id is None:
+                    raise RuntimeError(f"Node {node.qualified_name} OPCUA node id is not allocated!")
+                node.value = asyncio.run(self.opcuaClient.read(node.opcua.node_id))
+            else:
+                raise RuntimeError(f"Node {node.qualified_name} has no OPCUA config but OPCUA is set as the client!")
         if self.config.client == "ModBus":
             if node.modbus:
                 self.modbusClient.connect()
@@ -432,6 +454,8 @@ class SDPLC:
                             ),
                         )
                 self.modbusClient.close()
+            else:
+                raise RuntimeError(f"Node {node.qualified_name} has no Modbus config but Modbus is set as the client!")
         return node.value
 
     async def write_node(self, qualified_name: str, value: int | float | bool):
@@ -459,6 +483,8 @@ class SDPLC:
                 await self.opcuaServer.variables[node.qualified_name].write_value(
                     node.value
                 )
+            else:
+                raise RuntimeError(f"Node {node.qualified_name} has no OPCUA config but OPCUA is set as the server!")
         if self.config.server == "ModBus":
             if node.modbus:
                 if node.modbus.type == "c":
@@ -481,9 +507,16 @@ class SDPLC:
                     self.modbusServer.write_input_register(
                         node.modbus.slave, node.modbus.address, node.value
                     )
+            else:
+                raise RuntimeError(f"Node {node.qualified_name} has no Modbus config but Modbus is set as the server!")
 
         if self.config.client == "OPCUA":
-            pass
+            if node.opcua:
+                if node.opcua.node_id is None:
+                    raise RuntimeError(f"Node {node.qualified_name} OPCUA node id is not allocated!")
+                await self.opcuaClient.write(node.opcua.node_id, node.value)
+            else:
+                raise RuntimeError(f"Node {node.qualified_name} has no OPCUA config but OPCUA is set as the client!")
 
         if self.config.client == "ModBus":
             if node.modbus:
@@ -518,6 +551,8 @@ class SDPLC:
                             f"Modbus client configuration is missing! Failed to write Node {node.qualified_name} value!"
                         )
                 self.modbusClient.close()
+            else:
+                raise RuntimeError(f"Node {node.qualified_name} has no Modbus config but Modbus is set as the client!")
 
 
 simPLC = SDPLC()

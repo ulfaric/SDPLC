@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sdplc"
-version = "1.0.2"
+version = "1.0.3"
 description = "PLC Simulation and Remote Control"
 authors = ["ulfaric <ryf0510@live.com>"]
 readme = "README.md"

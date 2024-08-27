@@ -8,6 +8,4 @@ class OPCUAConfig(BaseModel):
     password: Optional[str] = None
     private_key: Optional[str] = None
     certificate: Optional[str] = None
-    security_policy: Optional[List[ua.SecurityPolicyType]] = [
-        ua.SecurityPolicyType.NoSecurity
-    ]
+    security_policy: Optional[List[int]] = [0]

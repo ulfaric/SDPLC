@@ -19,6 +19,7 @@ class ModBusRegConfig(BaseModel):
 class OPCUANodeConfig(BaseModel):
     namespace: str = "root"
     node_qualified_name: str = "root"
+    node_id: Optional[str] = None
 
 
 class Node(BaseModel):
