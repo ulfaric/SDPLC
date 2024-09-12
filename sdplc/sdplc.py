@@ -193,6 +193,7 @@ class SDPLC:
                 namespace = f"http://ulfaric/SDPLC/{node.opcua.namespace}"
                 if namespace not in self.opcuaServer.namespaces.keys():
                     self.opcuaServer.register_namespace(namespace)
+                if node.opcua.node_qualified_name not in self.opcuaServer.nodes.keys():
                     self.opcuaServer.register_node(
                         qualified_name=f"{node.opcua.node_qualified_name}",
                         namespace=namespace,

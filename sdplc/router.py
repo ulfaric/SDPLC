@@ -1,3 +1,4 @@
+from asyncua.ua.uatypes import QualifiedName
 from fastapi import APIRouter
 from typing import List
 from .schemas import Node
@@ -112,7 +113,18 @@ async def get_opcua_node_variables(node_id: str):
     """
     node = simPLC.opcuaServer.nodes[node_id]
     variables = await node.get_children()
-    return [await variable.read_browse_name() for variable in variables]
+
+    variables_info = []
+    for variable in variables:
+        browse_name: QualifiedName = await variable.read_browse_name()
+        variable_info = {
+            "NamespaceIndex": browse_name.NamespaceIndex,
+            "Name": browse_name.Name,
+            "NodeId": variable.nodeid.to_string(),
+        }
+        variables_info.append(variable_info)
+        
+    return variables_info
 
 
 # Modbus endpoints

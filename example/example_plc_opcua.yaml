@@ -1,0 +1,29 @@
+server: "OPCUA"
+
+opcua_server_config:
+  url: "opc.tcp://0.0.0.0:4840"
+
+nodes:
+  - qualified_name: "Inlet Valve"
+    value: false
+    opcua:
+      namespace: "0"
+      node_qualified_name: "1"
+
+  - qualified_name: "Outlet Valve"
+    value: false
+    opcua:
+      namespace: "0"
+      node_qualified_name: "2"
+
+  - qualified_name: "Tank Level"
+    value: 0.0
+    opcua:
+      namespace: "0"
+      node_qualified_name: "3"
+
+  - qualified_name: "Blender"
+    value: false
+    opcua:
+      namespace: "0"
+      node_qualified_name: "4"

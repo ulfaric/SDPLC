@@ -11,7 +11,7 @@ nodes:
   - qualified_name: "Inlet Valve"
     value: false
     modbus:
-      slave: 0
+      slave: 1
       address: 0
       type: "c"
     opcua:
@@ -21,7 +21,7 @@ nodes:
   - qualified_name: "Outlet Valve"
     value: false
     modbus:
-      slave: 0
+      slave: 1
       address: 1
       type: "c"
     opcua:
@@ -31,7 +31,7 @@ nodes:
   - qualified_name: "Tank Level"
     value: 0.0
     modbus:
-      slave: 0
+      slave: 1
       address: 0
       type: "i"
       register_size: 64
@@ -42,7 +42,7 @@ nodes:
   - qualified_name: "Blender"
     value: false
     modbus:
-      slave: 0
+      slave: 1
       address: 2
       type: "c"
     opcua:
