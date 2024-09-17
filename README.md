@@ -25,6 +25,10 @@ Initial release.
 
 This version will include the capability to connect with down stream ModBus/OPC UA server, so that your logic written with Akatosh will be able to actually control real PLCs!
 
+### 1.0.3
+
+1. Bug fixes
+
 ## Examples
 
 The following example shows how to run a simulated tank system. Then, a controller will be implemented to control the tank level.
