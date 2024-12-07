@@ -33,8 +33,20 @@ app.include_router(sim_plc_router)
 #         current_tank_level += 10 * eclpsed_time
 #     if outlet is True:
 #         current_tank_level -= 5 * eclpsed_time
+#     if current_tank_level > 100:
+#         current_tank_level = 100.0
+#         await simPLC.write_node("Tank Error", True)
+#     if current_tank_level < 0:
+#         current_tank_level = 0.0
 #     await simPLC.write_node("Tank Level", current_tank_level)
 #     time = Mundus.time
+
+# @event(at=0, till=inf, label="Tank Fail Safe", priority=2)
+# async def sim_tank_error():
+#     tank_error = await simPLC.read_node("Tank Error")
+#     if tank_error is True:
+#         await simPLC.write_node("Outlet Valve", True)
+#         await simPLC.write_node("Inlet Valve", False)
 
 if __name__ == "__main__":
     simPLC.init(

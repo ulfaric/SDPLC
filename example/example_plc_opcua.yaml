@@ -27,3 +27,9 @@ nodes:
     opcua:
       namespace: "0"
       node_qualified_name: "0"
+
+  - qualified_name: "Tank Error"
+    value: false
+    opcua:
+      namespace: "0"
+      node_qualified_name: "0"

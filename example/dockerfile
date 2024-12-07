@@ -1,0 +1,10 @@
+FROM python:3.12
+WORKDIR /app
+
+RUN pip install sdplc
+RUN pip install pyyaml
+
+COPY ./example_plc_opcua.yaml ./example_plc_opcua.yaml
+COPY ./example_plc.py ./example_plc.py
+
+CMD ["python", "example_plc.py"]

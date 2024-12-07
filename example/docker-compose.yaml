@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  sdplc:
+    build: .
+    container_name: sdplc
+    ports:
+      - 4840:4840
+    pull_policy: always
+    restart: always
