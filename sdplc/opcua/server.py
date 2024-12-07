@@ -2,6 +2,8 @@ import asyncio
 import datetime
 import logging
 import math
+import os
+import pathlib
 from typing import Any, Dict, List, NoReturn, Optional
 from urllib.parse import urlparse, urlunparse
 
@@ -183,6 +185,12 @@ class SDPLCOPCUAServer:
             self.endpont = urlparse(url=endpoint)
             self.server.set_endpoint(url=urlunparse(self.endpont))
 
+           # Get the current file's directory
+            current_dir = pathlib.Path(__file__).parent.absolute()
+            # Construct path to the XML file
+            xml_path = os.path.join(current_dir, "Opc.Ua.NodeSet2.xml")
+            await self.server.import_xml(path=xml_path, strict_mode=False)
+            
         asyncio.run(main=self.server.init())
         asyncio.run(main=_config())
 
