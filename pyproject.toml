@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sdplc"
-version = "1.0.4"
+version = "1.0.7"
 description = "PLC Simulation and Remote Control"
 authors = ["ulfaric <ryf0510@live.com>"]
 readme = "README.md"
@@ -10,14 +10,11 @@ repository = "https://github.com/ulfaric/SDPLC"
 [tool.poetry.dependencies]
 python = "^3.10"
 pymodbus = "^3.6.8"
-opentelemetry-api = "^1.24.0"
-opentelemetry-sdk = "^1.24.0"
-opentelemetry-exporter-otlp = "^1.24.0"
 pyyaml = "^6.0.1"
 colorlog = "^6.8.2"
 asyncua = "^1.1.0"
 numpy = "^1.26.4"
-fasterapi = "^0.0.41"
+fasterapi = "^0.0.46"
 akatosh = "^3.1.7"
 
 

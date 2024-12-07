@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   sdplc:
     build: .
@@ -8,3 +6,9 @@ services:
       - 4840:4840
     pull_policy: always
     restart: always
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

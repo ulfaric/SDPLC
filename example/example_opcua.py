@@ -1,3 +1,4 @@
+import logging
 from sdplc.opcua.server import opcuaServer
 
 opcuaServer.init()
@@ -9,5 +10,7 @@ opcuaServer.init()
 # opcuaServer.register_variable(
 #     "Tank Temperature", node_qualified_name="Tank", writeable=True, value=0
 # )
+
+logging.basicConfig(level=logging.DEBUG)
 
 opcuaServer.start()

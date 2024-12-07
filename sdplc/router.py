@@ -8,20 +8,6 @@ from Akatosh.universe import Mundus
 sim_plc_router = APIRouter()
 
 
-@sim_plc_router.get("/time/scale", tags=["Sim PLC"])
-def set_time_scale(scale: int):
-    """
-    set_time_scale Set the time scale of the simulated PLC.
-
-    The time scale adjusts the speed of the simulation. The default time scale is 1. Any value greater than 1 will speed up the simulation. Any value less than 1 will slow down the simulation.
-
-    Args:
-        scale (int): the time scale to set.
-    """
-    Mundus._time_scale = scale
-    return {"details": f"Time scale set to {scale}."}
-
-
 @sim_plc_router.get("/variables", response_model=List[Node], tags=["Sim PLC"])
 def get_variables():
     """

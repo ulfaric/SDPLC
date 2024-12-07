@@ -163,7 +163,7 @@ class SDPLCOPCUAServer:
 
     def init(
         self,
-        endpoint: str = "opc.tcp://0.0.0.0:14840/ulfaric/SDPLC/",
+        endpoint: str = "opc.tcp://0.0.0.0:4840/ulfaric/SDPLC/",
     ) -> None:
         """Initialize the server with given endpoint and configuration file."""
 
